@@ -20,3 +20,8 @@ next-env.d.ts
 # Saída do `npm run dev` redirecionada para arquivo. É ruído de máquina local:
 # muda a cada execução e não diz nada a quem clonar o projeto.
 dev.log
+
+# O `vercel link` acrescentou aqui um `.vercel` repetido e um `.env*` amplo.
+# O `.vercel` já estava na linha 18; o `.env*` engoliria o .env.example, que é
+# justamente o arquivo que DEVE ser versionado — ver o comentário lá em cima.
+# As regras específicas de ambiente já cobrem o que precisa ser ignorado.
