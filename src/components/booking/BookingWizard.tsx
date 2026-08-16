@@ -1015,7 +1015,7 @@ function ConfirmacaoFinal({
           <p className="text-sm font-semibold text-brass-deep">Guarde este link</p>
           <p className="mt-1 text-xs text-brass-deep/80">
             É por ele que você acompanha ou cancela este horário. Sem conta, não há outro
-            jeito de voltar aqui.
+            jeito de voltar aqui — e ele deixa de valer 1 hora depois do atendimento.
           </p>
           <p className="tnum mt-2 break-all rounded-field bg-surface px-2.5 py-2 text-xs text-ink">
             {`/a/${token}`}

@@ -72,6 +72,36 @@ async function hashDoIP(): Promise<string> {
    Agendar sem conta
    ========================================================================== */
 
+/**
+ * A frase que o cliente lê quando um limite pega.
+ *
+ * O `motivo` NUNCA vai para a tela: dizer "você já tem 2 e o limite é 2" ensina
+ * exatamente o que contornar. Mas mandar a mesma frase para tudo era pior de
+ * outro jeito — quem só precisava esperar 20 segundos lia "use o link que
+ * recebeu", ficava procurando um link que não existe, e desistia.
+ *
+ * O recorte aqui é por AÇÃO, não por regra: cada grupo diz o que fazer a
+ * seguir, sem revelar por que foi barrado.
+ */
+function mensagemDeBloqueio(motivo: string | undefined): string {
+  switch (motivo) {
+    // Só velocidade. A ação é esperar — e a frase precisa dizer isso, senão a
+    // pessoa acha que o agendamento é impossível e vai embora.
+    case "rajada_ip":
+    case "flood_ip":
+      return "Calma aí — espere alguns segundos e toque em confirmar de novo.";
+
+    // Este é o caso em que o link JÁ EXISTE e resolve o problema da pessoa.
+    case "limite_ativos_telefone":
+      return "Você já tem horário marcado nesta barbearia. Use o link de acompanhamento que recebeu para ver ou cancelar — ou fale direto com a barbearia.";
+
+    // Os demais (limite por dia, por hora, por telefone no dia) não têm ação
+    // possível agora além de falar com a loja.
+    default:
+      return "Não consegui concluir agora. Fale direto com a barbearia para marcar seu horário.";
+  }
+}
+
 export type AgendamentoPublico = {
   shopId: string;
   professionalId: string;
@@ -161,12 +191,7 @@ export async function agendarSemLogin(
         ipHash,
       });
 
-      // Uma frase só para todos os limites, e sem dizer qual regra pegou:
-      // explicar a regra ensina como contorná-la. Quem esbarrou nisso sendo
-      // cliente de verdade precisa de um caminho, não de um diagnóstico.
-      return falha(
-        "Não consegui concluir agora. Se você já tem horário marcado aqui, use o link que recebeu — ou fale direto com a barbearia.",
-      );
+      return falha(mensagemDeBloqueio(resposta?.motivo));
     }
 
     if (!resposta.token) return falha("Não consegui concluir o agendamento.");

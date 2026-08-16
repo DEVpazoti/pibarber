@@ -43,17 +43,19 @@ export default async function AcompanharPage({
         {agendamento ? (
           <AcompanharAgendamento agendamento={agendamento} token={token} />
         ) : (
-          /* Não distingue "nunca existiu" de "não é seu", e não há o que
-             distinguir: quem tem o link, tem o horário. Responder coisas
-             diferentes transformaria a página num oráculo de tokens válidos. */
+          /* Uma resposta só para "não existe", "não é seu" e "expirou", e é
+             de propósito: distinguir transformaria a página num oráculo que
+             confirma quais tokens são válidos. O texto cobre os três casos
+             sem dizer qual deles aconteceu. */
           <div className="rounded-card border border-line bg-surface p-6 text-center">
             <span className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full bg-surface-2 text-ink-faint">
               <CalendarX2 className="h-6 w-6" aria-hidden />
             </span>
-            <h1 className="text-xl text-ink">Não encontrei esse agendamento</h1>
+            <h1 className="text-xl text-ink">Este link não vale mais</h1>
             <p className="mx-auto mt-1.5 max-w-xs text-sm text-ink-soft">
-              O link pode estar incompleto ou o agendamento pode ter sido removido. Confira o
-              endereço, ou fale direto com a barbearia.
+              Ou o endereço está incompleto, ou o link já expirou — ele deixa de funcionar{" "}
+              <strong className="font-semibold">1 hora depois do fim do atendimento</strong>.
+              Para remarcar, é só agendar de novo.
             </p>
             <Link
               href="/app/buscar"
