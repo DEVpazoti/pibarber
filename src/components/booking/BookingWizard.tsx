@@ -7,6 +7,7 @@ import {
   CalendarPlus,
   Check,
   Clock,
+  Copy,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -15,6 +16,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { agendar, entrarNaEspera, horariosDisponiveis } from "@/app/actions/booking";
 import { agendarSemLogin } from "@/app/actions/publico";
 import { Avatar, Button, Field, Input, Modal, Textarea } from "@/components/ui";
+import { urlDoSite } from "@/lib/env";
 import { erroDeTelefone } from "@/lib/telefone";
 import { PERIODOS, type Dependent, type Professional, type Service } from "@/lib/types";
 import {
@@ -1010,18 +1012,7 @@ function ConfirmacaoFinal({
           direto para lá, para o endereço ficar no histórico do navegador mesmo
           que a pessoa não copie nada.
           -------------------------------------------------------------------- */}
-      {token ? (
-        <div className="w-full max-w-xs rounded-card border border-brass bg-brass-soft p-4 text-left">
-          <p className="text-sm font-semibold text-brass-deep">Guarde este link</p>
-          <p className="mt-1 text-xs text-brass-deep/80">
-            É por ele que você acompanha ou cancela este horário. Sem conta, não há outro
-            jeito de voltar aqui — e ele deixa de valer 1 hora depois do atendimento.
-          </p>
-          <p className="tnum mt-2 break-all rounded-field bg-surface px-2.5 py-2 text-xs text-ink">
-            {`/a/${token}`}
-          </p>
-        </div>
-      ) : null}
+      {token ? <LinkDeAcompanhamento token={token} /> : null}
 
       <div className="flex w-full max-w-xs flex-col gap-2">
         <Button
@@ -1053,6 +1044,66 @@ function ConfirmacaoFinal({
           </Link>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+/**
+ * O LINK DE ACOMPANHAMENTO de quem agendou sem conta.
+ *
+ * Mostra o endereço COMPLETO, com domínio. Antes aparecia só `/a/<token>`, o
+ * caminho relativo — que não serve para nada fora do navegador: colado no
+ * bloco de notas ou mandado no WhatsApp, não abre. E é exatamente isso que a
+ * pessoa vai fazer com ele, porque é o único jeito de voltar a este horário.
+ *
+ * O domínio sai de `urlDoSite()`, a mesma fonte do link público da barbearia e
+ * do redirect do Google. Ela lê `NEXT_PUBLIC_SITE_URL`, que o Next embute no
+ * pacote do navegador — por isso funciona aqui, num componente de cliente.
+ *
+ * `window.location.origin` daria o mesmo resultado hoje, mas passaria a mentir
+ * no dia em que o site atender por mais de um domínio: o link salvo ficaria
+ * preso ao endereço por onde a pessoa entrou.
+ */
+function LinkDeAcompanhamento({ token }: { token: string }) {
+  const [copiado, setCopiado] = useState(false);
+  const endereco = `${urlDoSite()}/a/${token}`;
+
+  async function copiar() {
+    try {
+      await navigator.clipboard.writeText(endereco);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2500);
+    } catch (error) {
+      // Navegador sem permissão de área de transferência (ou fora de HTTPS).
+      // Não é falha grave: o endereço está à vista e dá para selecionar à mão.
+      console.error("[agendar] falha ao copiar o link:", error);
+    }
+  }
+
+  return (
+    <div className="w-full max-w-xs rounded-card border border-brass bg-brass-soft p-4 text-left">
+      <p className="text-sm font-semibold text-brass-deep">Guarde este link</p>
+      <p className="mt-1 text-xs text-brass-deep/80">
+        É por ele que você acompanha ou cancela este horário. Sem conta, não há outro jeito de
+        voltar aqui — e ele deixa de valer 1 hora depois do atendimento.
+      </p>
+
+      <p className="mt-2 break-all rounded-field bg-surface px-2.5 py-2 text-xs text-ink">
+        {endereco}
+      </p>
+
+      <Button
+        variante="secondary"
+        tamanho="sm"
+        larguraTotal
+        className="mt-2"
+        onClick={copiar}
+        iconeEsquerda={
+          copiado ? <Check className="h-4 w-4" aria-hidden /> : <Copy className="h-4 w-4" aria-hidden />
+        }
+      >
+        {copiado ? "Copiado!" : "Copiar link"}
+      </Button>
     </div>
   );
 }
