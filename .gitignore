@@ -1,0 +1,22 @@
+node_modules/
+.next/
+out/
+build/
+.DS_Store
+
+# Ambiente — NUNCA comite
+.env
+.env.local
+.env*.local
+
+# .env.example NÃO entra aqui: ele é o modelo, só tem nome de variável e
+# comentário, e é o que diz a quem clonar o projeto o que precisa preencher.
+# Ignorá-lo esconde justamente a documentação que deveria vir junto.
+
+*.tsbuildinfo
+next-env.d.ts
+.vercel
+
+# Saída do `npm run dev` redirecionada para arquivo. É ruído de máquina local:
+# muda a cada execução e não diz nada a quem clonar o projeto.
+dev.log

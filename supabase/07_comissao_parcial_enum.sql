@@ -1,0 +1,30 @@
+-- ===========================================================================
+-- 07 — Pagamento parcial de comissão, PARTE 1 de 2: o valor do enum
+--
+-- ⚠️ ESTE ARQUIVO EXISTE SOZINHO POR UM MOTIVO. NÃO O JUNTE AO 08.
+--
+-- O endpoint `/database/query` da Management API (que é o que o
+-- `aplicar-sql.mjs` usa) executa o arquivo inteiro dentro de UMA transação.
+-- O Postgres proíbe usar um valor de enum recém-criado na mesma transação em
+-- que ele foi adicionado:
+--
+--   ERROR: 55P04: unsafe use of new value "partial" of enum type commission_status
+--   HINT:  New enum values must be committed before they can be used.
+--
+-- Isso foi confirmado empiricamente com um enum descartável antes de escrever
+-- a migration — não é suposição. Por isso o `add value` fica aqui, commitado
+-- sozinho, e todo o resto (coluna, tabela, backfill, funções) vai no 08.
+--
+-- ORDEM: 07 → 08. Nessa ordem, sem exceção.
+--
+-- ROLLBACK: não há, e não precisa haver. O Postgres não sabe remover valor de
+-- enum, mas um valor a mais e não usado é inerte: nenhuma linha o referencia,
+-- nenhum código o lê. Se o 08 falhar ou for revertido, este arquivo pode
+-- simplesmente ficar aplicado sem efeito nenhum. Reaplicar também é seguro —
+-- o `if not exists` cuida disso.
+-- ===========================================================================
+
+-- `before 'paid'` deixa a ordem do enum igual à do `debt_status`
+-- ('open','partial','paid'): a severidade cresce da esquerda para a direita.
+-- Nada hoje ordena por esta coluna, mas o dia em que ordenar, ordena certo.
+alter type commission_status add value if not exists 'partial' before 'paid';
