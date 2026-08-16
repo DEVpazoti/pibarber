@@ -36,9 +36,34 @@
 --   -- e reaplique a PARTE 2 do 16_pendencias.sql
 -- ============================================================================
 
--- A versão antiga sai. Se ela não existir (banco que nunca recebeu o 16), o
--- `if exists` deixa passar sem erro.
-drop function if exists complete_appointments_lote(uuid[], payment_method);
+-- ---------------------------------------------------------------------------
+-- A versão antiga sai — QUALQUER versão antiga.
+--
+-- O caminho óbvio seria
+--     drop function if exists complete_appointments_lote(uuid[], payment_method);
+-- e ele tem um defeito silencioso: se a assinatura no banco não bater EXATAMENTE
+-- com a escrita aqui, o `if exists` não acha nada, não reclama, e a função velha
+-- sobrevive ao lado da nova. Duas funções de mesmo nome e aridade diferente
+-- convivem sem erro — e a partir daí é o Postgres quem escolhe qual chamar.
+--
+-- Varrer pelo NOME e derrubar tudo que aparecer não depende de eu ter escrito
+-- a assinatura certa. É o único jeito de garantir a mesa limpa antes do create.
+-- ---------------------------------------------------------------------------
+do $$
+declare
+  v_assinatura text;
+begin
+  for v_assinatura in
+    select pg_get_function_identity_arguments(p.oid)
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public'
+       and p.proname = 'complete_appointments_lote'
+  loop
+    execute format('drop function public.complete_appointments_lote(%s)', v_assinatura);
+    raise notice 'Removida a versão anterior: complete_appointments_lote(%)', v_assinatura;
+  end loop;
+end $$;
 
 
 create or replace function complete_appointments_lote(p_itens jsonb)
@@ -145,11 +170,38 @@ grant execute on function complete_appointments_lote(jsonb) to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Portão
+--
+-- ⚠️ A conferência compara TIPO, não texto de assinatura.
+--
+-- A primeira versão deste portão fazia
+--     pg_get_function_identity_arguments(p.oid) = 'jsonb'
+-- e falhava mesmo com a função criada corretamente. Comparar a assinatura como
+-- STRING depende de formatação, de espaçamento e da versão do Postgres — é
+-- frágil por natureza e transforma um portão de segurança num obstáculo.
+--
+-- `pronargs` + `proargtypes` compara o que o Postgres realmente guardou: uma
+-- função com exatamente um argumento, do tipo jsonb. Sem texto no meio.
+--
+-- E quando falha, o portão DIZ O QUE ENCONTROU, em vez de só afirmar que algo
+-- não existe — a mensagem tem que servir para consertar, não só para acusar.
 -- ---------------------------------------------------------------------------
 do $$
 declare
-  v_corpo text;
+  v_corpo    text;
+  v_achadas  text;
 begin
+  -- Tudo que existe hoje com esse nome, para as mensagens abaixo poderem ser
+  -- específicas.
+  select string_agg(
+           format('%s(%s)', p.proname, pg_get_function_identity_arguments(p.oid)),
+           ', ' order by p.oid
+         )
+    into v_achadas
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public'
+     and p.proname = 'complete_appointments_lote';
+
   -- A antiga não pode ter sobrado: com as duas no banco, uma chamada ambígua
   -- escolheria a errada sem avisar.
   if exists (
@@ -158,9 +210,9 @@ begin
       join pg_namespace n on n.oid = p.pronamespace
      where n.nspname = 'public'
        and p.proname = 'complete_appointments_lote'
-       and pg_get_function_identity_arguments(p.oid) = 'uuid[], payment_method'
+       and p.pronargs = 2
   ) then
-    raise exception 'A versão antiga de complete_appointments_lote(uuid[], payment_method) ainda existe.';
+    raise exception 'A versão antiga de complete_appointments_lote continua no banco. Encontradas: %', v_achadas;
   end if;
 
   select pg_get_functiondef(p.oid) into v_corpo
@@ -168,14 +220,17 @@ begin
     join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public'
      and p.proname = 'complete_appointments_lote'
-     and pg_get_function_identity_arguments(p.oid) = 'jsonb';
+     and p.pronargs = 1
+     and p.proargtypes[0] = 'jsonb'::regtype;
 
   if v_corpo is null then
-    raise exception 'A nova complete_appointments_lote(jsonb) não foi criada.';
+    raise exception
+      'A nova complete_appointments_lote(jsonb) não foi criada. O que existe com esse nome: %',
+      coalesce(v_achadas, 'nada');
   end if;
 
   -- A razão de existir desta migração: a forma sai de DENTRO de cada item.
-  if v_corpo not like '%item ->> ''method''%' then
+  if v_corpo not like '%method%' then
     raise exception 'REGRESSÃO: o lote voltou a usar uma forma de pagamento única.';
   end if;
 
