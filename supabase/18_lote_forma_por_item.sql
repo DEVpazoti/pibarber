@@ -175,9 +175,16 @@ grant execute on function complete_appointments_lote(jsonb) to authenticated;
 --
 -- A primeira versão deste portão fazia
 --     pg_get_function_identity_arguments(p.oid) = 'jsonb'
--- e falhava mesmo com a função criada corretamente. Comparar a assinatura como
--- STRING depende de formatação, de espaçamento e da versão do Postgres — é
--- frágil por natureza e transforma um portão de segurança num obstáculo.
+-- e reprovava a migração mesmo com a função criada corretamente.
+--
+-- A CAUSA, confirmada consultando o pg_proc do banco: apesar do nome, essa
+-- função devolve os argumentos COM O NOME DO PARÂMETRO junto. O valor real é
+--     'p_itens jsonb'
+-- e não 'jsonb'. A comparação nunca teria como bater.
+--
+-- (`identity arguments` ali significa "os argumentos que IDENTIFICAM a função
+-- para um DROP/ALTER" — ou seja, sem os DEFAULTs. Não significa "só os tipos",
+-- que foi a leitura errada que produziu o bug.)
 --
 -- `pronargs` + `proargtypes` compara o que o Postgres realmente guardou: uma
 -- função com exatamente um argumento, do tipo jsonb. Sem texto no meio.
