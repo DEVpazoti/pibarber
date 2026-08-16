@@ -233,33 +233,37 @@ export async function marcarFalta(appointmentId: string): Promise<ActionResult> 
    ========================================================================== */
 
 /**
- * Conclui vários atendimentos de uma vez.
+ * Conclui vários atendimentos de uma vez, COM A FORMA DE PAGAMENTO DE CADA UM.
  *
  * O caso real: o barbeiro atendeu a quinta inteira e só esqueceu de registrar.
- * Abrir seis modais para dizer seis vezes "dinheiro, valor cheio" é o motivo de
- * ele nunca ter feito isso.
+ * Abrir seis modais completos para isso é o motivo de ele nunca ter feito.
  *
- * UMA forma de pagamento para o lote todo, valor cheio, sem desconto — quem
- * precisar de desconto ou fiado conclui item a item, onde essas decisões
- * existem. Fiado é recusado pelo banco de propósito: cada um precisaria de uma
- * data de vencimento própria.
+ * Mas a forma de pagamento NÃO pode ser uma só para o lote: a quinta-feira teve
+ * gente pagando em dinheiro, no débito e no pix. Uma forma única fecharia o
+ * caixa com o valor certo e as formas erradas — e o relatório por forma de
+ * pagamento passaria a mentir sem ninguém perceber, porque o total continuaria
+ * batendo. Por isso cada item traz a sua.
+ *
+ * Valor cheio e sem desconto continuam sendo a regra do lote: desconto e fiado
+ * são decisão individual e vivem no diálogo de conclusão completo.
  *
  * É TUDO OU NADA. `complete_appointments_lote` roda numa transação só: se um
  * falhar, nenhum entra. Melhor do que "concluí 6 e 3 passaram", porque nesse
  * caso o barbeiro não teria como saber quais.
  */
+export type ItemDoLote = { id: string; forma: PaymentMethod };
+
 export async function concluirEmLote(entrada: {
-  ids: string[];
-  forma: PaymentMethod;
+  itens: ItemDoLote[];
 }): Promise<ActionResult<{ quantos: number }>> {
   try {
     await requireShopContext();
 
-    if (entrada.ids.length === 0) return falha("Selecione pelo menos um atendimento.");
-    if (entrada.ids.length > 100) {
+    if (entrada.itens.length === 0) return falha("Selecione pelo menos um atendimento.");
+    if (entrada.itens.length > 100) {
       return falha("Dá para concluir até 100 atendimentos de uma vez.");
     }
-    if (entrada.forma === "fiado") {
+    if (entrada.itens.some((i) => i.forma === "fiado")) {
       return falha(
         "Fiado precisa ser lançado atendimento por atendimento, com a data de vencimento.",
       );
@@ -268,8 +272,10 @@ export async function concluirEmLote(entrada: {
     const supabase = await createClient();
 
     const { data, error } = await supabase.rpc("complete_appointments_lote", {
-      p_ids: entrada.ids,
-      p_forma: entrada.forma,
+      // O formato que a função espera: [{ id, method }]. `method`, e não
+      // `forma` — é o nome da coluna no banco, e traduzir só aqui evita um
+      // apelido a mais viajando pelo SQL.
+      p_itens: entrada.itens.map((i) => ({ id: i.id, method: i.forma })),
     });
 
     if (error) return falha(traduzirErroBanco(error, "[pendências] complete_appointments_lote"));

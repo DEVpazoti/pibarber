@@ -16,7 +16,9 @@ import {
   cancelarAgendamento,
   concluirEmLote,
   marcarFalta,
+  type ItemDoLote,
 } from "@/app/actions/appointments";
+import { CompleteDialog } from "@/components/painel/CompleteDialog";
 import { Button, EmptyState, Field, Modal, Select } from "@/components/ui";
 import { FORMA_PAGAMENTO, type AgendamentoNaAgenda, type PaymentMethod } from "@/lib/types";
 import { brl, cn, diaPorExtenso, horaBR } from "@/lib/utils";
@@ -29,10 +31,25 @@ import { brl, cn, diaPorExtenso, horaBR } from "@/lib/utils";
  * precisa fechar seis de uma vez. Por isso a seleção múltipla e o "marcar o dia
  * todo" vêm primeiro, e as ações por item são o caso secundário.
  *
+ * DOIS CAMINHOS PARA CONCLUIR, e a diferença entre eles é o ponto da tela:
+ *
+ *   · UM atendimento  → abre o `CompleteDialog`, o MESMO da agenda e da tela
+ *     Hoje: pagamento dividido, desconto e fiado com vencimento. Concluir em
+ *     silêncio, chutando "dinheiro", lançaria dinheiro errado no caixa sem o
+ *     barbeiro ter dito nada.
+ *   · VÁRIOS → diálogo próprio, com UMA forma de pagamento POR ATENDIMENTO.
+ *     Valor cheio e sem desconto: quem precisar disso conclui individualmente.
+ *
  * Tudo pensado para o polegar: alvo de 44px, ações por item lado a lado, barra
  * de conclusão FIXA no rodapé para não sumir ao rolar uma lista longa.
  */
 
+/**
+ * As formas que o lote aceita. `fiado` fica DE FORA: ele exige data de
+ * vencimento por atendimento e cria uma dívida por cliente — decisão
+ * individual, que não cabe num "concluir tudo com um toque". O banco recusa
+ * também, em `complete_appointments_lote`.
+ */
 const FORMAS: PaymentMethod[] = ["cash", "pix", "debit", "credit"];
 
 export type GrupoPendencia = {
@@ -52,6 +69,8 @@ export function PendenciasPainel({
   const router = useRouter();
   const [marcados, setMarcados] = useState<Set<string>>(new Set());
   const [confirmando, setConfirmando] = useState(false);
+  /** O atendimento aberto no diálogo de conclusão completo. */
+  const [concluindo, setConcluindo] = useState<AgendamentoNaAgenda | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [ocupado, iniciar] = useTransition();
 
@@ -168,9 +187,10 @@ export function PendenciasPainel({
                     aoAlternar={() => alternar(a.id)}
                     aoFaltar={() => agirNoItem(() => marcarFalta(a.id))}
                     aoCancelar={() => agirNoItem(() => cancelarAgendamento(a.id))}
-                    aoConcluir={() =>
-                      agirNoItem(() => concluirEmLote({ ids: [a.id], forma: "cash" }))
-                    }
+                    // Abre o diálogo completo em vez de concluir na hora: um
+                    // atendimento só merece a pergunta de como foi pago, com
+                    // desconto e fiado à disposição.
+                    aoConcluir={() => setConcluindo(a)}
                   />
                 ))}
               </ul>
@@ -222,15 +242,25 @@ export function PendenciasPainel({
 
       <ConfirmarLoteDialog
         aberto={confirmando}
-        quantidade={selecionados.length}
-        total={totalSelecionado}
+        selecionados={selecionados}
         podeVerDinheiro={podeVerDinheiro}
         aoFechar={() => setConfirmando(false)}
         aoConcluir={() => {
           setMarcados(new Set());
           router.refresh();
         }}
-        ids={selecionados.map((a) => a.id)}
+      />
+
+      {/* O MESMO diálogo da agenda e da tela Hoje. Reaproveitar em vez de
+          inventar outro é o que garante que concluir pela tela de Pendências
+          e concluir pela agenda lancem exatamente a mesma coisa no caixa. */}
+      <CompleteDialog
+        agendamento={concluindo}
+        aoFechar={() => setConcluindo(null)}
+        aoConcluir={() => {
+          setMarcados(new Set());
+          router.refresh();
+        }}
       />
     </>
   );
@@ -385,31 +415,37 @@ function AcaoRapida({
    ========================================================================== */
 
 /**
- * A confirmação existe porque o desfazer NÃO existe para conclusão.
+ * A confirmação do lote — com UMA FORMA DE PAGAMENTO POR ATENDIMENTO.
  *
- * Reverter um atendimento concluído significaria apagar entrada de caixa,
- * comissão (que pode já ter sido paga) e fiado (que pode já ter recebido) — a
- * função do banco recusa isso de propósito. Sem volta atrás, a defesa contra
- * "concluí 20 por engano" tem que estar ANTES, com o número e o total à vista.
+ * Por que não uma forma só para o lote: a quinta-feira esquecida teve gente
+ * pagando em dinheiro, no débito e no pix. Uma forma única fecharia o caixa com
+ * o valor certo e as formas erradas, e o relatório por forma passaria a mentir
+ * sem ninguém perceber — porque o TOTAL continuaria batendo.
+ *
+ * O "aplicar a todos" no topo existe porque o caso mais comum ainda é todo
+ * mundo ter pagado igual. Ele preenche as linhas de uma vez; quem for
+ * diferente, o barbeiro troca só naquela.
+ *
+ * A confirmação em si existe porque o desfazer NÃO existe para conclusão:
+ * reverter um concluído significaria apagar entrada de caixa, comissão (que
+ * pode já ter sido paga) e fiado (que pode já ter recebido). Sem volta atrás, a
+ * defesa contra "concluí 20 por engano" tem que estar ANTES, com tudo à vista.
  */
 function ConfirmarLoteDialog({
   aberto,
-  ids,
-  quantidade,
-  total,
+  selecionados,
   podeVerDinheiro,
   aoFechar,
   aoConcluir,
 }: {
   aberto: boolean;
-  ids: string[];
-  quantidade: number;
-  total: number;
+  selecionados: AgendamentoNaAgenda[];
   podeVerDinheiro: boolean;
   aoFechar: () => void;
   aoConcluir: () => void;
 }) {
-  const [forma, setForma] = useState<PaymentMethod>("cash");
+  /** A forma escolhida para cada atendimento, por id. */
+  const [formas, setFormas] = useState<Record<string, PaymentMethod>>({});
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, iniciar] = useTransition();
 
@@ -417,25 +453,39 @@ function ConfirmarLoteDialog({
   const emVoo = useRef(false);
 
   // O diálogo fica MONTADO devolvendo null quando fechado, então o estado
-  // sobrevive entre uma abertura e outra. Sem este reset, o erro da tentativa
-  // anterior apareceria já na abertura seguinte, falando de um lote que nem
-  // existe mais.
+  // sobrevive entre uma abertura e outra. Sem este reset, as formas escolhidas
+  // no lote anterior reapareceriam num lote de outras pessoas.
   useEffect(() => {
     if (!aberto) return;
-    setForma("cash");
+    setFormas(Object.fromEntries(selecionados.map((a) => [a.id, "cash" as PaymentMethod])));
     setErro(null);
     emVoo.current = false;
+    // `selecionados` fora das dependências de propósito: a lista é recriada a
+    // cada render do pai, e incluí-la reiniciaria as formas a cada tecla.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aberto]);
 
   if (!aberto) return null;
+
+  const total = selecionados.reduce((soma, a) => soma + (a.total_price - a.discount), 0);
+
+  function aplicarATodos(forma: PaymentMethod) {
+    setFormas(Object.fromEntries(selecionados.map((a) => [a.id, forma])));
+  }
 
   function enviar() {
     if (emVoo.current) return;
     emVoo.current = true;
     setErro(null);
 
+    const itens: ItemDoLote[] = selecionados.map((a) => ({
+      id: a.id,
+      // O padrão só entra se algo escapou do reset — nunca no caminho normal.
+      forma: formas[a.id] ?? "cash",
+    }));
+
     iniciar(async () => {
-      const resultado = await concluirEmLote({ ids, forma });
+      const resultado = await concluirEmLote({ itens });
       emVoo.current = false;
 
       if (!resultado.ok) {
@@ -451,7 +501,11 @@ function ConfirmarLoteDialog({
     <Modal
       aberto
       aoFechar={aoFechar}
-      titulo={quantidade === 1 ? "Concluir 1 atendimento" : `Concluir ${quantidade} atendimentos`}
+      titulo={
+        selecionados.length === 1
+          ? "Concluir 1 atendimento"
+          : `Concluir ${selecionados.length} atendimentos`
+      }
       descricao="Isso lança o valor no caixa e gera a comissão. Não tem como desfazer."
       rodape={
         <div className="flex flex-col gap-2">
@@ -474,6 +528,79 @@ function ConfirmarLoteDialog({
       }
     >
       <div className="flex flex-col gap-4">
+        {/* O atalho do caso comum: quase sempre todo mundo pagou igual. */}
+        <Field
+          label="Aplicar a todos"
+          htmlFor="lote-todos"
+          dica="Preenche a lista abaixo de uma vez. Depois é só trocar quem pagou diferente."
+        >
+          {/* `value=""` fixo, de propósito: este seletor é um GATILHO, não
+              guarda escolha nenhuma. Ele dispara e volta sozinho para o texto
+              neutro, porque a resposta de "qual forma?" está nas linhas
+              abaixo — deixá-lo marcado sugeriria que ele manda nelas depois. */}
+          <Select
+            id="lote-todos"
+            value=""
+            onChange={(e) => {
+              if (e.target.value) aplicarATodos(e.target.value as PaymentMethod);
+            }}
+          >
+            <option value="">Escolha uma forma…</option>
+            {FORMAS.map((f) => (
+              <option key={f} value={f}>
+                {FORMA_PAGAMENTO[f]}
+              </option>
+            ))}
+          </Select>
+        </Field>
+
+        {/* Uma linha por atendimento, cada uma com a forma dela. */}
+        <div className="flex flex-col gap-2">
+          <p className="text-sm font-medium text-ink">Como cada um pagou</p>
+
+          <ul className="flex flex-col gap-2">
+            {selecionados.map((a) => (
+              <li
+                key={a.id}
+                className="flex flex-wrap items-center gap-2 rounded-card border border-line bg-surface p-2.5"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-ink">
+                    {a.dependente?.full_name ?? a.cliente?.full_name ?? "Cliente"}
+                  </p>
+                  <p className="tnum truncate text-xs text-ink-soft">
+                    {diaPorExtenso(a.starts_at.slice(0, 10))} às {horaBR(a.starts_at)}
+                    {podeVerDinheiro ? ` · ${brl(a.total_price - a.discount)}` : ""}
+                  </p>
+                </div>
+
+                {/* A largura vai no embrulho: o Select renderiza um `div
+                    relative` por fora (por causa da seta), e uma classe de
+                    largura passada a ele chegaria no `<select>` de dentro,
+                    deixando o embrulho livre para esticar no flex. */}
+                <div className="w-32 shrink-0">
+                  <Select
+                    aria-label={`Forma de pagamento de ${a.cliente?.full_name ?? "cliente"}`}
+                    value={formas[a.id] ?? "cash"}
+                    onChange={(e) =>
+                      setFormas((atual) => ({
+                        ...atual,
+                        [a.id]: e.target.value as PaymentMethod,
+                      }))
+                    }
+                  >
+                    {FORMAS.map((f) => (
+                      <option key={f} value={f}>
+                        {FORMA_PAGAMENTO[f]}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+
         {podeVerDinheiro ? (
           <div className="rounded-card bg-surface-2 p-4">
             <p className="flex items-baseline justify-between text-sm">
@@ -483,28 +610,11 @@ function ConfirmarLoteDialog({
           </div>
         ) : null}
 
-        <Field
-          label="Como foi pago"
-          htmlFor="lote-forma"
-          obrigatorio
-          dica="Vale para todos os selecionados, com o valor cheio. Para desconto ou fiado, conclua um por um."
-        >
-          <Select
-            id="lote-forma"
-            value={forma}
-            onChange={(e) => setForma(e.target.value as PaymentMethod)}
-          >
-            {FORMAS.map((f) => (
-              <option key={f} value={f}>
-                {FORMA_PAGAMENTO[f]}
-              </option>
-            ))}
-          </Select>
-        </Field>
-
         <p className="text-xs text-ink-faint">
-          Cada atendimento entra no faturamento da <strong>data original</strong> dele, não da
-          data de hoje.
+          Valor cheio, sem desconto. Para desconto, pagamento dividido ou{" "}
+          <strong>fiado</strong>, feche o lote e conclua aquele atendimento pelo botão
+          “Concluir” da linha dele. Cada um entra no faturamento da{" "}
+          <strong>data original</strong>, não na de hoje.
         </p>
       </div>
     </Modal>

@@ -1405,10 +1405,7 @@ export type Database = {
         Returns: boolean
       }
       complete_appointments_lote: {
-        Args: {
-          p_forma?: Database["public"]["Enums"]["payment_method"]
-          p_ids: string[]
-        }
+        Args: { p_itens: Json }
         Returns: number
       }
       reverter_status_agendamento: {
