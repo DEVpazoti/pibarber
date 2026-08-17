@@ -380,10 +380,19 @@ create policy waitlist_delete on waitlist_entries
 -- REVIEWS — leitura pública, escrita do autor, resposta do dono
 -- ===========================================================================
 
+-- ⚠️ `reviews_public_select` foi REMOVIDA em 23_reviews_sem_anon.sql, junto
+-- com o grant de select de `anon` nesta tabela. Era:
+--
+--     create policy reviews_public_select on reviews
+--       for select to anon
+--       using (exists (select 1 from barbershops b where b.id = barbershop_id and b.is_active));
+--
+-- Com ela e o grant, `reviews.profile_id` saía cru por /rest/v1/reviews e
+-- permitia montar o grafo pessoa ↔ barbearia (SEC-004). Quem lê avaliação sem
+-- conta passa por `public_reviews()`, que abrevia o nome do autor e não
+-- devolve profile_id. A policy fica removida também para que um grant
+-- acidental, sozinho, não reabra o vazamento — sem policy, a RLS nega.
 drop policy if exists reviews_public_select on reviews;
-create policy reviews_public_select on reviews
-  for select to anon
-  using (exists (select 1 from barbershops b where b.id = barbershop_id and b.is_active));
 
 drop policy if exists reviews_select on reviews;
 create policy reviews_select on reviews
@@ -513,9 +522,16 @@ create policy debt_payments_write on debt_payments
 
 grant usage on schema public to anon, authenticated;
 
--- --- anon: só as cinco tabelas de leitura pública ---------------------------
+-- --- anon: as tabelas de leitura pública ------------------------------------
+--
+-- ⚠️ `reviews` SAIU desta lista em 23_reviews_sem_anon.sql. O grant era de
+-- tabela inteira, e por ele saía `reviews.profile_id` cru: agrupando por ele,
+-- qualquer visitante montava a lista de barbearias que cada pessoa frequenta.
+-- A leitura pública de avaliação já é feita, com recorte e nome abreviado, por
+-- `public_reviews()` (10_avaliacoes_publicas.sql) — que é a única porta que a
+-- aplicação usa. Ver SEC-004. Recolocar `reviews` aqui faz a 23 falhar.
 revoke all on all tables in schema public from anon;
-grant select on barbershops, services, professionals, business_hours, reviews to anon;
+grant select on barbershops, services, professionals, business_hours to anon;
 
 -- --- authenticated: acesso amplo; quem filtra é a RLS -----------------------
 grant select, insert, update, delete on all tables in schema public to authenticated;
@@ -562,7 +578,12 @@ revoke execute on all functions in schema public from authenticated;
 grant execute on function distancia_km(numeric, numeric, numeric, numeric) to anon, authenticated;
 grant execute on function search_barbershops(text, text, numeric, numeric, numeric, integer) to anon, authenticated;
 grant execute on function get_available_slots(uuid, date, integer) to anon, authenticated;
-grant execute on function book_appointment(uuid, uuid, timestamptz, uuid[], uuid, uuid, text, text, text, appointment_source) to anon, authenticated;
+-- `anon` NÃO entra aqui. Esta função não confere allow_public_booking, não
+-- valida telefone e não olha o expediente — quem faz isso é
+-- book_appointment_publico, que a chama por dentro e, sendo security definer,
+-- não depende do grant do chamador. Ver 21_fecha_book_appointment.sql,
+-- SEC-001 e BUG-001. Reconceder a `anon` faz a migration 21 falhar.
+grant execute on function book_appointment(uuid, uuid, timestamptz, uuid[], uuid, uuid, text, text, text, appointment_source) to authenticated;
 
 grant execute on function is_platform_admin() to authenticated;
 grant execute on function my_shop_id() to authenticated;

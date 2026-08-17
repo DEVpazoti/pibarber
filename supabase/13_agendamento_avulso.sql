@@ -463,8 +463,15 @@ $fn$;
 
 -- A assinatura não mudou, então os grants continuam valendo. Reafirmados por
 -- garantia, como no arquivo 11.
-revoke execute on function book_appointment(uuid, uuid, timestamptz, uuid[], uuid, uuid, text, text, text, appointment_source) from public;
-grant execute on function book_appointment(uuid, uuid, timestamptz, uuid[], uuid, uuid, text, text, text, appointment_source) to anon, authenticated;
+--
+-- ⚠️ `anon` SAIU desta lista em 21_fecha_book_appointment.sql. Esta função não
+-- confere allow_public_booking, não valida DDD e (até a 21) não olhava o
+-- expediente. Concedida a `anon`, ela é uma porta de agendamento público sem
+-- nenhuma das travas das migrations 17 e 20 — é o SEC-001 / BUG-001. Quem
+-- reaplicar este arquivo depois da 21 e reconceder a `anon` faz o portão da
+-- 21 falhar de propósito.
+revoke execute on function book_appointment(uuid, uuid, timestamptz, uuid[], uuid, uuid, text, text, text, appointment_source) from public, anon;
+grant execute on function book_appointment(uuid, uuid, timestamptz, uuid[], uuid, uuid, text, text, text, appointment_source) to authenticated;
 
 
 -- ---------------------------------------------------------------------------

@@ -245,8 +245,11 @@ $fn$;
 -- A assinatura não mudou, então os grants do 03_rls.sql continuam valendo.
 -- Reafirmados aqui porque `create or replace` de função já existente preserva
 -- os privilégios, mas um `drop` acidental no meio de um replay não preservaria.
-revoke execute on function book_appointment(uuid, uuid, timestamptz, uuid[], uuid, uuid, text, text, text, appointment_source) from public;
-grant execute on function book_appointment(uuid, uuid, timestamptz, uuid[], uuid, uuid, text, text, text, appointment_source) to anon, authenticated;
+-- `anon` saiu daqui em 21_fecha_book_appointment.sql (SEC-001 / BUG-001):
+-- concedida a `anon`, esta função é uma segunda porta de agendamento público
+-- sem nenhuma das travas das migrations 17 e 20. Reconceder faz a 21 falhar.
+revoke execute on function book_appointment(uuid, uuid, timestamptz, uuid[], uuid, uuid, text, text, text, appointment_source) from public, anon;
+grant execute on function book_appointment(uuid, uuid, timestamptz, uuid[], uuid, uuid, text, text, text, appointment_source) to authenticated;
 
 
 -- ---------------------------------------------------------------------------
