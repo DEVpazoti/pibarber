@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect, unstable_rethrow } from "next/navigation";
 
+import { ROTA_EMAIL_CONFIRMADO } from "@/lib/auth";
 import { urlDoSite } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { falha, sucesso, type ActionResult } from "@/lib/types";
@@ -176,7 +177,11 @@ export async function criarConta(entrada: {
       password: senha,
       options: {
         data: { full_name: nome }, // vira profiles.full_name pelo trigger
-        emailRedirectTo: `${urlDoSite()}/callback`,
+        // Vai para o /callback, que é quem troca o código por sessão, e de lá
+        // para a tela de boas-vindas. O link do e-mail é o único que a pessoa
+        // clica horas depois, em outro aparelho — cair direto na home logada,
+        // sem uma linha dizendo "deu certo", parece que o clique não fez nada.
+        emailRedirectTo: `${urlDoSite()}/callback?proximo=${encodeURIComponent(ROTA_EMAIL_CONFIRMADO)}`,
       },
     });
 

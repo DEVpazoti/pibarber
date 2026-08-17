@@ -168,6 +168,16 @@ export async function requireOwnerContext(): Promise<ShopContext> {
    Rotas
    ========================================================================== */
 
+/**
+ * Onde termina a confirmação de e-mail.
+ *
+ * Mora aqui, e não escrito à mão em cada ponto, porque o caminho aparece em
+ * três: o `emailRedirectTo` do cadastro, o `?proximo=` que o /callback devolve
+ * e a pasta da própria página. Errar a letra em um deles não quebra tela
+ * nenhuma — só larga o recém-cadastrado num lugar que não é o de chegada.
+ */
+export const ROTA_EMAIL_CONFIRMADO = "/email-confirmado";
+
 /** A casa de cada papel, usada depois do login e em todo redirect de acesso. */
 export function rotaInicial(perfil: Pick<Profile, "role" | "is_platform_admin">): string {
   if (perfil.is_platform_admin) return "/admin";

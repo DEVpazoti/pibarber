@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { ROTA_EMAIL_CONFIRMADO } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -24,8 +25,24 @@ export async function GET(request: NextRequest) {
   const erro = searchParams.get("error");
   const erroDescricao = searchParams.get("error_description");
 
+  // Quem chegou pelo link do e-mail de confirmação vem com este destino, posto
+  // por `criarConta()`. Saber disso muda as mensagens de erro daqui: neste
+  // caminho não existe janela do Google para ninguém ter fechado.
+  const confirmandoEmail = proximo === ROTA_EMAIL_CONFIRMADO;
+
   if (erro || erroDescricao) {
     console.error("[callback] o provedor recusou:", erro, erroDescricao);
+
+    // O link do e-mail tem validade (Supabase → Auth → Email OTP Expiration) e
+    // vale uma vez só. Estourado qualquer um dos dois, o Supabase devolve o
+    // mesmo `access_denied` do Google — e a mensagem de Google, aqui, seria
+    // mentira.
+    if (confirmandoEmail) {
+      return recusar(
+        origin,
+        "O link de confirmação expirou ou já tinha sido usado. Tente entrar; se o e-mail ainda não estiver confirmado, refaça o cadastro para receber outro link.",
+      );
+    }
 
     // Fechar a janela do Google e negar a permissão caem os dois em
     // `access_denied`. Não é falha nossa e não adianta pedir "tente de novo" —
@@ -54,6 +71,16 @@ export async function GET(request: NextRequest) {
 
   if (error || !data.user) {
     console.error("[callback] falha ao trocar o código por sessão:", error);
+
+    // Ter um `code` na mão prova que o Supabase ACEITOU o token do e-mail —
+    // ou seja, o endereço já foi confirmado lá antes de a pessoa chegar aqui.
+    // O que falta é só a sessão: o verificador do PKCE ficou no navegador do
+    // cadastro, e o link foi aberto no app do Gmail ou no outro aparelho.
+    // Mandar essa pessoa para o login dizendo "link expirado" seria mentira
+    // duas vezes — o e-mail está confirmado, e ela só precisa entrar.
+    if (confirmandoEmail) {
+      return NextResponse.redirect(`${origin}${ROTA_EMAIL_CONFIRMADO}`);
+    }
 
     // O código do PKCE vale uma vez só e expira rápido. Voltar ao /callback
     // pelo histórico do navegador cai sempre aqui, e "tente de novo" sozinho
