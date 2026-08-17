@@ -39,7 +39,8 @@
 -- ---------------------------------------------------------------------------
 -- ROLLBACK
 -- ---------------------------------------------------------------------------
---   drop policy if exists imagens_leitura on storage.objects;
+--   drop policy if exists imagens_leitura_publica on storage.objects;
+--   drop policy if exists imagens_leitura_privada on storage.objects;
 --   drop policy if exists imagens_insert  on storage.objects;
 --   drop policy if exists imagens_update  on storage.objects;
 --   drop policy if exists imagens_delete  on storage.objects;
@@ -142,10 +143,38 @@ grant execute on function pode_escrever_imagem(text) to authenticated;
 
 -- Leitura: qualquer um, logado ou não. É o que faz a logo aparecer em /b/[slug]
 -- para quem ainda não tem conta.
+--
+-- ⚠️ RECORTADA EM 22_imagens_leitura_recortada.sql. A versão original era
+-- `for select to anon, authenticated using (bucket_id = 'imagens')` — sem
+-- filtro de caminho. No Supabase a API de LISTAGEM também é servida por um
+-- select sobre storage.objects, então aquela policy deixava qualquer visitante
+-- enumerar `clientes/` e obter a foto de rosto de todo cliente junto com o
+-- profile_id dele. É o SEC-002.
+--
+-- Duas policies em vez de uma: `anon` vê só a vitrine; `authenticated` vê a
+-- vitrine mais o que pode escrever — este segundo termo é o que mantém
+-- `apagarImagemAntiga()` funcionando, porque o remove do Storage faz um select
+-- interno para achar o objeto.
 drop policy if exists imagens_leitura on storage.objects;
-create policy imagens_leitura on storage.objects
-  for select to anon, authenticated
-  using (bucket_id = 'imagens');
+
+drop policy if exists imagens_leitura_publica on storage.objects;
+create policy imagens_leitura_publica on storage.objects
+  for select to anon
+  using (
+    bucket_id = 'imagens'
+    and split_part(name, '/', 1) in ('barbearias', 'barbeiros')
+  );
+
+drop policy if exists imagens_leitura_privada on storage.objects;
+create policy imagens_leitura_privada on storage.objects
+  for select to authenticated
+  using (
+    bucket_id = 'imagens'
+    and (
+      split_part(name, '/', 1) in ('barbearias', 'barbeiros')
+      or pode_escrever_imagem(name)
+    )
+  );
 
 drop policy if exists imagens_insert on storage.objects;
 create policy imagens_insert on storage.objects
@@ -184,14 +213,28 @@ begin
     raise exception 'O bucket "imagens" não está público — as imagens não apareceriam no site.';
   end if;
 
+  -- Cinco desde a 22: a leitura virou duas policies (anon e authenticated),
+  -- com recortes diferentes. Ver SEC-002.
   select count(*) into v_qtd
     from pg_policies
    where schemaname = 'storage'
      and tablename = 'objects'
-     and policyname in ('imagens_leitura', 'imagens_insert', 'imagens_update', 'imagens_delete');
+     and policyname in (
+       'imagens_leitura_publica', 'imagens_leitura_privada',
+       'imagens_insert', 'imagens_update', 'imagens_delete'
+     );
 
-  if v_qtd <> 4 then
-    raise exception 'Esperava 4 policies de imagem, encontrei %.', v_qtd;
+  if v_qtd <> 5 then
+    raise exception 'Esperava 5 policies de imagem, encontrei %.', v_qtd;
+  end if;
+
+  if exists (
+    select 1 from pg_policies
+     where schemaname = 'storage' and tablename = 'objects'
+       and policyname = 'imagens_leitura'
+  ) then
+    raise exception
+      'PERIGO: a policy imagens_leitura (sem recorte) voltou — clientes/ ficaria enumerável por anon. Ver SEC-002.';
   end if;
 
   raise notice '14 aplicada — bucket "imagens" pronto: leitura pública, escrita do dono.';
