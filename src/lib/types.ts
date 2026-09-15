@@ -21,6 +21,9 @@ export type DebtStatus = Enums<"debt_status">;
 export type AppointmentSource = Enums<"appointment_source">;
 export type WaitlistStatus = Enums<"waitlist_status">;
 export type NotificationType = Enums<"notification_type">;
+export type WhatsappEvent = Enums<"whatsapp_event">;
+export type WhatsappStatus = Enums<"whatsapp_status">;
+export type WhatsappTemplateStatus = Enums<"whatsapp_template_status">;
 
 /* ==========================================================================
    Tabelas
@@ -49,6 +52,9 @@ export type Commission = Tables<"commissions">;
 export type Debt = Tables<"debts">;
 export type DebtPayment = Tables<"debt_payments">;
 export type AppNotification = Tables<"notifications">;
+/** A fila de WhatsApp. Só a service role lê — ver 24_whatsapp.sql. */
+export type WhatsappMessage = Tables<"whatsapp_messages">;
+export type WhatsappTemplate = Tables<"whatsapp_templates">;
 
 /* ==========================================================================
    Retorno de Server Action
