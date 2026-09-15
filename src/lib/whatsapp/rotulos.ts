@@ -48,6 +48,10 @@ export function explicarFalha(codigo: string | null | undefined): string {
       return "Integração desconectada — avise o suporte";
     case "OBSOLETA":
       return "Não enviada: o horário mudou antes";
+    case "OPT_OUT":
+      return "O cliente pediu para não receber mensagens";
+    case "131042":
+      return "Pendência de pagamento na conta da plataforma — avise o suporte";
     default:
       return "Não foi possível entregar";
   }
