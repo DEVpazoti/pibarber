@@ -1,5 +1,9 @@
 // GERADO pelo Supabase a partir do schema real. Nao edite na mao.
 // Para regerar: node supabase/aplicar-sql.mjs --tipos
+//
+// ⚠️ As partes de 24_whatsapp.sql (whatsapp_*, e as 3 colunas whatsapp_*_enabled
+// de barbershops) foram escritas à mão pelo agente 01, no formato do gerador,
+// porque o banco não estava ao alcance. Regere depois de aplicar a 24.
 
 export type Json =
   | string
@@ -256,6 +260,9 @@ export type Database = {
           state: string | null
           street: string | null
           whatsapp: string | null
+          whatsapp_cancellation_enabled: boolean
+          whatsapp_confirmation_enabled: boolean
+          whatsapp_reminder_enabled: boolean
           zip_code: string | null
         }
         Insert: {
@@ -285,6 +292,9 @@ export type Database = {
           state?: string | null
           street?: string | null
           whatsapp?: string | null
+          whatsapp_cancellation_enabled?: boolean
+          whatsapp_confirmation_enabled?: boolean
+          whatsapp_reminder_enabled?: boolean
           zip_code?: string | null
         }
         Update: {
@@ -314,6 +324,9 @@ export type Database = {
           state?: string | null
           street?: string | null
           whatsapp?: string | null
+          whatsapp_cancellation_enabled?: boolean
+          whatsapp_confirmation_enabled?: boolean
+          whatsapp_reminder_enabled?: boolean
           zip_code?: string | null
         }
         Relationships: [
@@ -1333,6 +1346,132 @@ export type Database = {
           },
         ]
       }
+      whatsapp_messages: {
+        Row: {
+          appointment_id: string | null
+          attempts: number
+          barbershop_id: string | null
+          created_at: string
+          delivered_at: string | null
+          event: Database["public"]["Enums"]["whatsapp_event"]
+          external_id: string | null
+          failure_code: string | null
+          failure_reason: string | null
+          id: string
+          params: Json
+          read_at: string | null
+          recipient: string
+          scheduled_for: string
+          sent_at: string | null
+          status: Database["public"]["Enums"]["whatsapp_status"]
+        }
+        Insert: {
+          appointment_id?: string | null
+          attempts?: number
+          barbershop_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          event: Database["public"]["Enums"]["whatsapp_event"]
+          external_id?: string | null
+          failure_code?: string | null
+          failure_reason?: string | null
+          id?: string
+          params?: Json
+          read_at?: string | null
+          recipient: string
+          scheduled_for?: string
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["whatsapp_status"]
+        }
+        Update: {
+          appointment_id?: string | null
+          attempts?: number
+          barbershop_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          event?: Database["public"]["Enums"]["whatsapp_event"]
+          external_id?: string | null
+          failure_code?: string | null
+          failure_reason?: string | null
+          id?: string
+          params?: Json
+          read_at?: string | null
+          recipient?: string
+          scheduled_for?: string
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["whatsapp_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_messages_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_messages_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_opt_outs: {
+        Row: {
+          created_at: string
+          phone: string
+          reason: string | null
+        }
+        Insert: {
+          created_at?: string
+          phone: string
+          reason?: string | null
+        }
+        Update: {
+          created_at?: string
+          phone?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
+      whatsapp_templates: {
+        Row: {
+          body_text: string
+          event: Database["public"]["Enums"]["whatsapp_event"]
+          id: string
+          language: string
+          meta_name: string
+          reject_reason: string | null
+          reviewed_at: string | null
+          status: Database["public"]["Enums"]["whatsapp_template_status"]
+          submitted_at: string
+        }
+        Insert: {
+          body_text: string
+          event: Database["public"]["Enums"]["whatsapp_event"]
+          id?: string
+          language?: string
+          meta_name: string
+          reject_reason?: string | null
+          reviewed_at?: string | null
+          status?: Database["public"]["Enums"]["whatsapp_template_status"]
+          submitted_at?: string
+        }
+        Update: {
+          body_text?: string
+          event?: Database["public"]["Enums"]["whatsapp_event"]
+          id?: string
+          language?: string
+          meta_name?: string
+          reject_reason?: string | null
+          reviewed_at?: string | null
+          status?: Database["public"]["Enums"]["whatsapp_template_status"]
+          submitted_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1521,6 +1660,43 @@ export type Database = {
           state: string
         }[]
       }
+      whatsapp_dados_agendamentos: {
+        Args: { p_ids: string[] }
+        Returns: {
+          appointment_id: string
+          barbearia: string
+          barbearia_slug: string
+          barbershop_id: string
+          cancelamento_ligado: boolean
+          cliente_nome: string
+          confirmacao_ligada: boolean
+          lembrete_ligado: boolean
+          profissional: string
+          public_token: string
+          starts_at: string
+          status: Database["public"]["Enums"]["appointment_status"]
+          telefone: string
+          tem_conta: boolean
+        }[]
+      }
+      whatsapp_lembretes_pendentes: {
+        Args: { p_limite?: number }
+        Returns: string[]
+      }
+      whatsapp_reivindicar: {
+        Args: { p_id?: string; p_limite?: number }
+        Returns: Database["public"]["Tables"]["whatsapp_messages"]["Row"][]
+      }
+      whatsapp_registrar_status: {
+        Args: {
+          p_codigo?: string
+          p_external_id: string
+          p_motivo?: string
+          p_quando: string
+          p_status: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       appointment_source: "online" | "manual"
@@ -1542,6 +1718,14 @@ export type Database = {
       transaction_type: "income" | "expense"
       user_role: "owner" | "assistant" | "client"
       waitlist_status: "waiting" | "notified" | "converted" | "expired"
+      whatsapp_event: "confirmation" | "reminder" | "cancellation"
+      whatsapp_status: "pending" | "sent" | "delivered" | "read" | "failed"
+      whatsapp_template_status:
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "paused"
+        | "disabled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1690,6 +1874,15 @@ export const Constants = {
       transaction_type: ["income", "expense"],
       user_role: ["owner", "assistant", "client"],
       waitlist_status: ["waiting", "notified", "converted", "expired"],
+      whatsapp_event: ["confirmation", "reminder", "cancellation"],
+      whatsapp_status: ["pending", "sent", "delivered", "read", "failed"],
+      whatsapp_template_status: [
+        "pending",
+        "approved",
+        "rejected",
+        "paused",
+        "disabled",
+      ],
     },
   },
 } as const
