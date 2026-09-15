@@ -182,6 +182,36 @@ export type EnderecoLocalizado = {
   precisao: "exata" | "aproximada";
 };
 
+/**
+ * O bloco "Mensagens de WhatsApp" de /painel/configuracoes, já pronto para
+ * desenhar. Montado no servidor por `carregarPainelWhatsapp()` — o telefone do
+ * cliente e o código cru de falha da Meta nunca chegam aqui.
+ */
+export type PainelWhatsapp = {
+  /** Há credencial da Meta neste ambiente? Sem ela nada sai, e a tela avisa. */
+  integracaoAtiva: boolean;
+  eventos: {
+    evento: WhatsappEvent;
+    ligado: boolean;
+    /** Nulo quando a migração 24 ainda não rodou neste banco. */
+    templateStatus: WhatsappTemplateStatus | null;
+    motivoReprovacao: string | null;
+    /** O texto como chega no celular, com os dados reais da barbearia. */
+    previa: string;
+  }[];
+  /** Os últimos 20 envios da loja. */
+  envios: {
+    id: string;
+    criadoEm: string;
+    /** O nome da ficha. Nunca o telefone. */
+    cliente: string | null;
+    evento: WhatsappEvent;
+    status: WhatsappStatus;
+    /** Já traduzida para o dono. Nula quando não falhou. */
+    falha: string | null;
+  }[];
+};
+
 /** O JSON que `client_home` devolve — a home do app em uma chamada. */
 export type HomeDoCliente = {
   proximo: {

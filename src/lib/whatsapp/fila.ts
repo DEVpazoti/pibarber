@@ -48,7 +48,7 @@ const MAX_TENTATIVAS = 5;
    ========================================================================== */
 
 /** "sexta, 18/09" — no fuso de São Paulo, nunca no do servidor. */
-function diaParaMensagem(iso: string): string {
+export function diaParaMensagem(iso: string): string {
   const semana = new Intl.DateTimeFormat("pt-BR", { weekday: "long", timeZone: FUSO })
     .format(new Date(iso))
     .replace("-feira", "");

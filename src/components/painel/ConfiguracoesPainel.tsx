@@ -9,19 +9,21 @@ import {
   salvarHorarios,
   type LinhaHorario,
 } from "@/app/actions/shop";
+import { AvisosWhatsapp } from "@/components/painel/AvisosWhatsapp";
 import { BeneficiosBarbearia } from "@/components/painel/BeneficiosBarbearia";
 import { LocalizacaoBarbearia } from "@/components/painel/LocalizacaoBarbearia";
 import { Button, CampoImagem, Field, Input, Select, Textarea } from "@/components/ui";
-import type { Amenity, Barbershop, BusinessHour } from "@/lib/types";
+import type { Amenity, Barbershop, BusinessHour, PainelWhatsapp } from "@/lib/types";
 import { buscarCEP, ESTADOS } from "@/lib/viacep";
 import { DIAS_SEMANA, horaCurta, mascaraCEP, mascaraTelefone, soDigitos } from "@/lib/utils";
 
 /**
  * As configurações da barbearia. Só o dono chega aqui.
  *
- * Três formulários independentes: os dados da loja, os benefícios e o horário
- * de funcionamento. Separados porque são salvos em momentos diferentes — o dono
- * mexe no horário duas vezes por ano e no telefone quase nunca.
+ * Quatro formulários independentes: os dados da loja, os benefícios, o horário
+ * de funcionamento e as mensagens de WhatsApp. Separados porque são salvos em
+ * momentos diferentes — o dono mexe no horário duas vezes por ano e no
+ * telefone quase nunca.
  */
 export function ConfiguracoesPainel({
   loja,
@@ -29,12 +31,14 @@ export function ConfiguracoesPainel({
   urlPublica,
   catalogoBeneficios,
   beneficiosMarcados,
+  whatsapp,
 }: {
   loja: Barbershop;
   horarios: BusinessHour[];
   urlPublica: string;
   catalogoBeneficios: Amenity[];
   beneficiosMarcados: string[];
+  whatsapp: PainelWhatsapp;
 }) {
   return (
     <div className="flex flex-col gap-10">
@@ -44,6 +48,7 @@ export function ConfiguracoesPainel({
         selecionadosIniciais={beneficiosMarcados}
       />
       <FormHorarios horarios={horarios} />
+      <AvisosWhatsapp painel={whatsapp} />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { requireOwnerContext } from "@/lib/auth";
 import { urlDoSite } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import type { Amenity, BusinessHour } from "@/lib/types";
+import { carregarPainelWhatsapp } from "@/lib/whatsapp/painel";
 
 export const metadata: Metadata = { title: "Configurações" };
 
@@ -65,11 +66,16 @@ export default async function ConfiguracoesPage() {
     console.error("[configurações] erro inesperado ao ler benefícios:", erro);
   }
 
+  // WhatsApp (agente 01). `requireOwnerContext()` no topo é o que autoriza a
+  // leitura da fila por service role lá dentro. Não lança: sem a 24 aplicada
+  // ou sem credencial, o bloco aparece sem histórico.
+  const whatsapp = await carregarPainelWhatsapp(loja);
+
   return (
     <>
       <PageHeader
         titulo="Configurações"
-        descricao="Os dados da barbearia, o link público e o horário de funcionamento."
+        descricao="Os dados da barbearia, o link público, o horário de funcionamento e as mensagens de WhatsApp."
       />
 
       <ConfiguracoesPainel
@@ -78,6 +84,7 @@ export default async function ConfiguracoesPage() {
         urlPublica={urlDoSite()}
         catalogoBeneficios={catalogo}
         beneficiosMarcados={beneficiosMarcados}
+        whatsapp={whatsapp}
       />
     </>
   );

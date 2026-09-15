@@ -128,6 +128,52 @@ export async function salvarBarbearia(dados: DadosBarbearia): Promise<ActionResu
 }
 
 /* ==========================================================================
+   Mensagens de WhatsApp — só o liga/desliga (o texto é da plataforma)
+   ========================================================================== */
+
+export type AvisosWhatsappLigados = {
+  confirmation: boolean;
+  reminder: boolean;
+  cancellation: boolean;
+};
+
+/**
+ * Liga ou desliga cada mensagem de WhatsApp da barbearia.
+ *
+ * Só o dono: a mensagem sai em nome da loja, e desligar o lembrete é uma
+ * decisão que mexe em falta de cliente. O texto não passa por aqui — não é
+ * editável (ver o comentário em AvisosWhatsapp.tsx).
+ *
+ * Desligar vale para o que ainda NÃO entrou na fila. Um lembrete que já está
+ * esperando as 18h continua lá; é o comportamento esperado de "a partir de
+ * agora", e evita um desligar que apaga histórico.
+ */
+export async function salvarAvisosWhatsapp(ligados: AvisosWhatsappLigados): Promise<ActionResult> {
+  try {
+    const { shopId } = await requireOwnerContext();
+    const supabase = await createClient();
+
+    const { error } = await supabase
+      .from("barbershops")
+      .update({
+        // `=== true`: o valor chega do navegador, e só um booleano de verdade liga.
+        whatsapp_confirmation_enabled: ligados.confirmation === true,
+        whatsapp_reminder_enabled: ligados.reminder === true,
+        whatsapp_cancellation_enabled: ligados.cancellation === true,
+      })
+      .eq("id", shopId);
+
+    if (error) return falha(traduzirErroBanco(error, "[configurações] salvar mensagens de WhatsApp"));
+
+    revalidatePath("/painel/configuracoes");
+    return sucesso(undefined, "Mensagens salvas.");
+  } catch (error) {
+    unstable_rethrow(error);
+    return falha(traduzirErroDesconhecido(error, "[configurações] salvarAvisosWhatsapp"));
+  }
+}
+
+/* ==========================================================================
    Localização — endereço escrito vira coordenada
    ========================================================================== */
 
