@@ -10,9 +10,14 @@ import { envPublico, envServiceRole } from "@/lib/env";
  *
  * >>> ELE IGNORA A RLS POR COMPLETO. <<<
  *
- * Só existem dois usos legítimos no PiBarber:
+ * Os usos legítimos no PiBarber:
  *   1. /admin criando a conta do dono junto com a barbearia
  *   2. /painel/equipe criando a conta do assistente
+ *   3. o agendamento sem cadastro (src/app/actions/publico.ts — o porquê está lá)
+ *   4. o WhatsApp (src/lib/whatsapp/, /api/cron/whatsapp, /api/webhooks/whatsapp):
+ *      as tabelas da fila não têm policy para ninguém, e cron e webhook não
+ *      têm sessão. A tela do dono lê o histórico por aqui DEPOIS de
+ *      requireOwnerContext(), filtrando pela loja dele.
  *
  * REGRA: confirme o papel de quem chamou ANTES de instanciar isto.
  *
