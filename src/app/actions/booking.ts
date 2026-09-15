@@ -9,6 +9,7 @@ import { tagBarbearia } from "@/lib/queries/barbearia";
 import { createClient } from "@/lib/supabase/server";
 import { falha, sucesso, type ActionResult, type BarbeariaEncontrada } from "@/lib/types";
 import { timestampSP } from "@/lib/utils";
+import { avisarPorWhatsapp } from "@/lib/whatsapp/avisos";
 
 /**
  * Busca, agendamento, lista de espera e avaliação — o lado do CLIENTE.
@@ -212,6 +213,11 @@ export async function agendar(entrada: {
     if (error) return falha(traduzirErroBanco(error, "[agendar] book_appointment"));
     if (!data) return falha("Não consegui concluir o agendamento.");
 
+    // Efeito colateral, não parte do agendamento: `avisarPorWhatsapp` tem o
+    // próprio try/catch que só loga e NUNCA lança — Meta fora do ar não
+    // desfaz o "Agendamento confirmado!". Ver src/lib/whatsapp/avisos.ts.
+    await avisarPorWhatsapp("confirmation", { appointmentId: data });
+
     revalidatePath("/app");
     revalidatePath("/app/agendamentos");
     return sucesso({ id: data }, "Agendamento confirmado!");
@@ -383,6 +389,9 @@ export async function cancelarMeuAgendamento(
     });
 
     if (error) return falha(traduzirErroBanco(error, "[cliente] cancelar agendamento"));
+
+    // Antes do revalidate, e sem poder falhar — ver avisos.ts.
+    await avisarPorWhatsapp("cancellation", { appointmentId });
 
     revalidatePath("/app/agendamentos");
     revalidatePath("/app");
