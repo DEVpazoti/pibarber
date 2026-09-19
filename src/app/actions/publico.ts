@@ -11,6 +11,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { erroDeTelefone, normalizarTelefone } from "@/lib/telefone";
 import { falha, sucesso, type ActionResult } from "@/lib/types";
 import { timestampSP } from "@/lib/utils";
+import { avisarPorWhatsapp } from "@/lib/whatsapp/avisos";
 
 /**
  * AGENDAMENTO SEM CADASTRO — o lado do servidor.
@@ -196,6 +197,10 @@ export async function agendarSemLogin(
 
     if (!resposta.token) return falha("Não consegui concluir o agendamento.");
 
+    // A confirmação por WhatsApp, com o link de acompanhamento dentro. Nunca
+    // lança — ver src/lib/whatsapp/avisos.ts.
+    await avisarPorWhatsapp("confirmation", { token: resposta.token });
+
     // A agenda do painel precisa mostrar o horário novo na hora.
     revalidatePath("/painel");
     revalidatePath("/painel/agenda");
@@ -285,6 +290,9 @@ export async function cancelarPorToken(
     });
 
     if (error) return falha(traduzirErroBanco(error, "[público] cancelar_por_token"));
+
+    // Antes do revalidate, e sem poder falhar — ver avisos.ts.
+    await avisarPorWhatsapp("cancellation", { token });
 
     revalidatePath("/painel");
     revalidatePath("/painel/agenda");

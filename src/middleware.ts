@@ -136,7 +136,13 @@ export const config = {
      *   _next/static, _next/image  → build
      *   favicon, manifest, ícones  → estáticos
      *   arquivos com extensão      → imagens e afins
+     *   api/webhooks, api/cron     → chamados pela Meta e pelo pg_cron, SEM
+     *                                sessão. Nada aqui os redirecionaria (não
+     *                                são prefixo protegido), mas cada chamada
+     *                                pagaria um getUser() de ida e volta ao
+     *                                Supabase à toa — e o webhook da Meta
+     *                                tem prazo curto para receber o 200.
      */
-    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|api/webhooks|api/cron|favicon.ico|manifest.webmanifest|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

@@ -5,11 +5,15 @@
  * branco, e você perde tempo procurando no lugar errado.
  */
 
-function obrigatoria(nome: string, valor: string | undefined): string {
+function obrigatoria(
+  nome: string,
+  valor: string | undefined,
+  onde = "com os dados do seu projeto Supabase",
+): string {
   if (!valor || valor.trim() === "") {
     throw new Error(
       `Variável de ambiente ${nome} não está definida. ` +
-        `Copie o .env.example para .env.local e preencha com os dados do seu projeto Supabase.`,
+        `Copie o .env.example para .env.local e preencha ${onde}.`,
     );
   }
   return valor;
@@ -50,4 +54,70 @@ export function urlDoSite(): string {
 /** URL absoluta de uma rota: `absoluta("/b/navalha-e-cia")`. */
 export function absoluta(rota: string): string {
   return `${urlDoSite()}${rota.startsWith("/") ? rota : `/${rota}`}`;
+}
+
+/* ==========================================================================
+   WhatsApp oficial (Meta Cloud API) — agente 01
+   ========================================================================== */
+
+export type EnvWhatsapp = {
+  phoneNumberId: string;
+  wabaId: string;
+  /** SEGREDO. Token de Usuário do Sistema — nunca o de 24h do painel. */
+  accessToken: string;
+  /** SEGREDO. É com ele que o webhook confere que a requisição veio da Meta. */
+  appSecret: string;
+  /** SEGREDO. A frase que a Meta devolve na verificação do webhook. */
+  webhookVerifyToken: string;
+  graphVersion: string;
+};
+
+/**
+ * As credenciais do WhatsApp, ou `null` quando a integração não está ligada.
+ *
+ * ⚠️ DIFERENTE DAS OUTRAS: a ausência NÃO é erro. Quem roda local não tem
+ * número registrado na Meta, e o projeto precisa subir, agendar e cancelar do
+ * mesmo jeito — só sem mandar mensagem. O interruptor é
+ * `WHATSAPP_PHONE_NUMBER_ID`: sem ele, tudo desliga em silêncio.
+ *
+ * Com ele, as demais passam a ser obrigatórias e a falta grita. Meia
+ * configuração é o pior dos mundos: o código acha que está ligado, a Meta
+ * recusa cada envio, e a fila enche de falhas que parecem culpa do cliente.
+ *
+ * SÓ NO SERVIDOR. Nenhuma destas tem prefixo NEXT_PUBLIC_, e nenhuma pode ter.
+ */
+export function envWhatsapp(): EnvWhatsapp | null {
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID?.trim();
+  if (!phoneNumberId) return null;
+
+  const onde = "conforme docs/whatsapp.md";
+  return {
+    phoneNumberId,
+    wabaId: obrigatoria("WHATSAPP_WABA_ID", process.env.WHATSAPP_WABA_ID, onde).trim(),
+    accessToken: obrigatoria(
+      "WHATSAPP_ACCESS_TOKEN",
+      process.env.WHATSAPP_ACCESS_TOKEN,
+      onde,
+    ).trim(),
+    appSecret: obrigatoria("WHATSAPP_APP_SECRET", process.env.WHATSAPP_APP_SECRET, onde).trim(),
+    webhookVerifyToken: obrigatoria(
+      "WHATSAPP_WEBHOOK_VERIFY_TOKEN",
+      process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN,
+      onde,
+    ).trim(),
+    // A versão da Graph API muda a cada trimestre e as antigas expiram. Fica
+    // em variável para trocar sem deploy de código.
+    graphVersion: process.env.WHATSAPP_GRAPH_VERSION?.trim() || "v25.0",
+  };
+}
+
+/**
+ * SEGREDO. Protege `/api/cron/whatsapp`, que é uma URL pública.
+ *
+ * `null` quando não definido — e aí o endpoint recusa TODO mundo. Falhar
+ * fechado é a única opção: um cron sem senha é um botão público de "dispare
+ * todas as mensagens da fila agora".
+ */
+export function envCronSecret(): string | null {
+  return process.env.CRON_SECRET?.trim() || null;
 }

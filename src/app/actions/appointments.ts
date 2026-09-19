@@ -8,6 +8,7 @@ import { traduzirErroBanco, traduzirErroDesconhecido } from "@/lib/erros";
 import { createClient } from "@/lib/supabase/server";
 import { falha, sucesso, type ActionResult, type PaymentMethod } from "@/lib/types";
 import { timestampSP } from "@/lib/utils";
+import { avisarPorWhatsapp } from "@/lib/whatsapp/avisos";
 
 /**
  * Ações da agenda — criar, concluir, cancelar e marcar falta.
@@ -202,6 +203,11 @@ export async function cancelarAgendamento(
     });
 
     if (error) return falha(traduzirErroBanco(error, "[agenda] cancel_appointment"));
+
+    // Avisa o cliente ANTES do revalidate. `avisarPorWhatsapp` nunca lança:
+    // falha de WhatsApp não pode transformar um cancelamento feito em erro na
+    // tela do barbeiro. Ver src/lib/whatsapp/avisos.ts.
+    await avisarPorWhatsapp("cancellation", { appointmentId });
 
     revalidarAgenda();
     return sucesso(undefined, "Agendamento cancelado.");
