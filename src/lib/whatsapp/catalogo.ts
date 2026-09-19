@@ -20,7 +20,10 @@
  * ---------------------------------------------------------------------------
  * Regras da Meta que o texto respeita — e que um texto novo precisa respeitar
  * ---------------------------------------------------------------------------
- *   · Parâmetro nunca no começo nem no fim do corpo.
+ *   · Parâmetro nunca no começo nem no fim do corpo. ⚠️ E PONTO FINAL NÃO
+ *     CONTA COMO TEXTO: "…acesse {{6}}." foi REPROVADO na primeira submissão,
+ *     com "As variáveis não podem estar no início ou no fim do modelo".
+ *     Depois do último parâmetro tem que vir palavra, não só pontuação.
  *   · Dois parâmetros nunca colados ("{{1}}{{2}}" é recusado).
  *   · Texto fixo suficiente entre os parâmetros — template que é "só
  *     variável" é reprovado como spam.
@@ -69,7 +72,7 @@ export const CATALOGO: Readonly<Record<EventoWhatsapp, TemplateDoCatalogo>> = {
     rotulo: "Confirmação",
     quando: "Assim que o cliente agenda pelo app ou pelo link público.",
     texto:
-      "Olá {{1}}! Seu horário na {{2}} está confirmado para {{3}} às {{4}} com {{5}}. Para acompanhar ou cancelar, acesse {{6}}.",
+      "Olá {{1}}! Seu horário na {{2}} está confirmado para {{3}} às {{4}} com {{5}}. Acompanhe ou cancele em {{6}} quando precisar.",
     campos: ["nome", "barbearia", "data", "hora", "profissional", "link"],
     exemplo: [
       "João",
@@ -106,7 +109,7 @@ export const CATALOGO: Readonly<Record<EventoWhatsapp, TemplateDoCatalogo>> = {
     rotulo: "Cancelamento",
     quando: "Quando o horário é cancelado — pela barbearia ou pelo próprio cliente.",
     texto:
-      "Olá {{1}}! Seu horário na {{2}} em {{3}} às {{4}} foi cancelado. Você pode marcar outro em {{5}}.",
+      "Olá {{1}}! Seu horário na {{2}} em {{3}} às {{4}} foi cancelado. Marque outro em {{5}} quando quiser.",
     campos: ["nome", "barbearia", "data", "hora", "link"],
     exemplo: [
       "João",
