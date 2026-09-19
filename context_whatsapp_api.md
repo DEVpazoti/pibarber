@@ -1,0 +1,162 @@
+# Ativação do WhatsApp — meu roteiro
+
+**Atualizado em:** 19/09/2026
+
+Checklist da configuração: o que já foi feito nos painéis e o que falta clicar.
+O passo a passo detalhado de cada item está em [docs/whatsapp.md](docs/whatsapp.md).
+
+> ⚠️ **Sem segredos aqui.** Os valores ficam no `.env.local` (só nesta máquina,
+> ignorado pelo Git) e no painel da Vercel.
+
+---
+
+## ✅ Já feito
+
+### Número de produção — WhatsApp Manager
+- [x] Conta **Pi Barber** criada
+- [x] Número **+55 16 99305-5888** adicionado e verificado
+- [x] PIN de duas etapas definido (**guarde**: é pedido se registrar de novo)
+- [x] Registrado na Cloud API pela chamada `/register`
+      (o painel não faz isso; deu "A conta não existe" até rodar)
+
+**Estado hoje:** `VERIFIED` · plataforma `CLOUD_API`
+**Phone Number ID:** `1288033061065766`
+⚠️ Não confundir com `1294244557111053` — esse é o número de teste americano,
+que não entrega para o Brasil (erro `130497`).
+
+### Credenciais coletadas
+- [x] `WHATSAPP_PHONE_NUMBER_ID` — Etapa 1 do painel do app
+- [x] `WHATSAPP_WABA_ID` — WhatsApp Manager, seletor da conta Pi Barber
+- [x] `WHATSAPP_ACCESS_TOKEN` — Usuário do Sistema
+- [x] `WHATSAPP_APP_SECRET` — Configurações do app → Básico
+- [x] `WHATSAPP_WEBHOOK_VERIFY_TOKEN` — inventado por mim
+- [x] `CRON_SECRET` — gerado, está na última linha do `.env.local`
+
+### Templates submetidos à Meta — 19/09
+- [x] `pibarber_confirmacao_v1`
+- [x] `pibarber_lembrete_v1`
+- [x] `pibarber_cancelamento_v1`
+
+Os três estão **em análise (PENDING)**. Conferir quando quiser:
+```bash
+node --no-warnings scripts/whatsapp-templates.mjs --listar
+```
+
+---
+
+## ⏳ Falta fazer
+
+### 1. Colocar as 6 variáveis na Vercel
+**Onde:** `vercel.com` → projeto PiBarber → **Settings** → **Environment Variables**
+(o projeto é da conta do Guilherme — preciso de acesso, ou ele faz)
+
+- [ ] `WHATSAPP_PHONE_NUMBER_ID` = `1288033061065766`
+- [ ] `WHATSAPP_WABA_ID`
+- [ ] `WHATSAPP_ACCESS_TOKEN`
+- [ ] `WHATSAPP_APP_SECRET`
+- [ ] `WHATSAPP_WEBHOOK_VERIFY_TOKEN`
+- [ ] `CRON_SECRET`
+- [ ] Conferir `NEXT_PUBLIC_SITE_URL` = `https://pibarber.vercel.app`
+
+Marcar **Production**. Nenhuma com prefixo `NEXT_PUBLIC_`.
+
+### 2. Subir o código e fazer o deploy
+- [ ] Enviar o branch `agente-01-whatsapp` para o GitHub
+- [ ] Merge
+- [ ] **Redeploy** na Vercel (Deployments → ⋯ → Redeploy)
+
+Hoje a rota do webhook responde **404** no ar. Enquanto isso não subir, os
+passos 3 e 6 não têm como funcionar.
+
+### 3. Salvar o webhook na Meta
+**Onde:** painel do app → WhatsApp → Configuração → **Etapa 2** → Configurar webhooks
+**Depende de:** passos 1 e 2 prontos
+
+- [ ] URL de callback: `https://pibarber.vercel.app/api/webhooks/whatsapp`
+- [ ] Verificar token: o mesmo valor da variável
+- [ ] Clicar em **Verificar e salvar**
+- [ ] Em Campos do webhook → **Gerenciar** → assinar **`messages`** e
+      **`message_template_status_update`**
+
+Sem assinar os campos, a mensagem fica em "Enviado" para sempre e o PARAR não
+funciona.
+
+### 4. Rodar a migração no Supabase
+**Onde:** painel do Supabase → **SQL Editor** → New query
+**Não depende do deploy** — dá para fazer agora
+
+- [ ] Colar o conteúdo de `supabase/24_whatsapp.sql` e rodar
+      (esperando o `SUPABASE_ACCESS_TOKEN` do Guilherme para eu fazer por aqui)
+- [ ] Ver a mensagem `24 aplicada — …` no fim
+
+Conferir:
+```sql
+select count(*) from whatsapp_templates;   -- 3
+select count(*) from whatsapp_messages;    -- 0
+```
+
+Enquanto não rodar: o site funciona normal, o cliente agenda, mas nenhuma
+mensagem entra na fila.
+
+### 5. Publicar o app na Meta
+**Onde:** painel do app → seletor do topo, **Desenvolvimento → Ao vivo**
+
+- [x] Página de política de privacidade criada — fica em `/privacidade`
+      (entra no ar junto com o deploy do passo 2)
+- [ ] Preencher a URL em Configurações do app → Básico:
+      `https://pibarber.vercel.app/privacidade`
+- [ ] Virar para **Ao vivo**
+
+Em modo de desenvolvimento só chegam webhooks de teste — é o aviso amarelo do
+painel.
+
+### 6. ✅ Cadastrar forma de pagamento — FEITO (19/09)
+**Onde:** WhatsApp Manager → Configurações da conta → Forma de pagamento
+
+- [x] Cartão cadastrado
+
+Era o que evitava o erro `131042` em todo envio.
+
+### 7. Esperar a aprovação dos templates
+- [ ] Os três em **APPROVED**
+
+De minutos a 2 dias. **Enquanto estiverem PENDING, nenhuma mensagem sai** — e
+a tela do dono mostra "Em análise pela Meta", não erro.
+
+### 8. Agendar o cron dos lembretes
+**Onde:** Supabase → SQL Editor (`docs/whatsapp.md` §6.1)
+**Depende de:** passos 1, 2 e 4
+
+- [ ] Ligar `pg_cron` e `pg_net` em Database → Extensions
+- [ ] Guardar o `CRON_SECRET` no Vault como `whatsapp_cron_secret`
+- [ ] Rodar o `cron.schedule` de 5 em 5 minutos
+
+Sem isso: confirmação e cancelamento saem na hora, mas **lembrete nenhum sai**.
+
+### 9. Testar de ponta a ponta
+- [ ] Agendar pelo site com o meu celular → confirmação chega em segundos
+- [ ] Cancelar pelo painel → chega o aviso
+- [ ] Agendar para amanhã → lembrete marcado para as 18h de hoje
+- [ ] Responder **PARAR** → para de receber
+
+---
+
+## O que dá para fazer em paralelo
+
+Os passos **4, 5 e 7** não dependem do deploy — posso tocar agora.
+Os passos **3, 8 e 9** só depois de 1 e 2.
+
+---
+
+## Se uma mensagem não chegar
+
+Olhar o `failure_code` da linha em `whatsapp_messages`. Tabela completa em
+`docs/whatsapp.md` §7. Os mais comuns:
+
+| Código | O que é |
+|---|---|
+| `190` | Token expirado — usei o de 24h no lugar do permanente |
+| `130497` | Número de teste americano, ou destinatário fora do Brasil |
+| `131042` | Falta forma de pagamento (passo 6) |
+| `131026` | O número do cliente não tem WhatsApp |
+| `132000`–`132015` | Template não aprovado, ou texto diferente do que o código envia |

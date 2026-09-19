@@ -27,6 +27,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: absoluta("/"), changeFrequency: "weekly", priority: 1 },
     { url: absoluta("/criar-conta"), changeFrequency: "monthly", priority: 0.5 },
     { url: absoluta("/entrar"), changeFrequency: "monthly", priority: 0.3 },
+    { url: absoluta("/privacidade"), changeFrequency: "yearly", priority: 0.3 },
   ];
 
   return [...fixas, ...(await barbearias())];
