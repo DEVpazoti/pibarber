@@ -195,7 +195,7 @@ exemplos.
 
 **`pibarber_confirmacao_v1`**
 ```
-Olá {{1}}! Seu horário na {{2}} está confirmado para {{3}} às {{4}} com {{5}}. Para acompanhar ou cancelar, acesse {{6}}.
+Olá {{1}}! Seu horário na {{2}} está confirmado para {{3}} às {{4}} com {{5}}. Acompanhe ou cancele em {{6}} quando precisar.
 ```
 Exemplos: `João` · `Barbearia do Zé` · `sexta, 18/09` · `14:30` · `Carlos` · `https://pibarber.vercel.app/app/agendamentos`
 
@@ -207,7 +207,7 @@ Exemplos: `João` · `Barbearia do Zé` · `14:30` · `Carlos` · `https://pibar
 
 **`pibarber_cancelamento_v1`**
 ```
-Olá {{1}}! Seu horário na {{2}} em {{3}} às {{4}} foi cancelado. Você pode marcar outro em {{5}}.
+Olá {{1}}! Seu horário na {{2}} em {{3}} às {{4}} foi cancelado. Marque outro em {{5}} quando quiser.
 ```
 Exemplos: `João` · `Barbearia do Zé` · `sexta, 18/09` · `14:30` · `https://pibarber.vercel.app/b/barbearia-do-ze`
 

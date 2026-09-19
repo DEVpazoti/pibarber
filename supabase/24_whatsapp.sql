@@ -271,11 +271,11 @@ revoke all on whatsapp_opt_outs  from anon, authenticated;
 
 insert into whatsapp_templates (event, meta_name, language, body_text) values
   ('confirmation', 'pibarber_confirmacao_v1', 'pt_BR',
-   'Olá {{1}}! Seu horário na {{2}} está confirmado para {{3}} às {{4}} com {{5}}. Para acompanhar ou cancelar, acesse {{6}}.'),
+   'Olá {{1}}! Seu horário na {{2}} está confirmado para {{3}} às {{4}} com {{5}}. Acompanhe ou cancele em {{6}} quando precisar.'),
   ('reminder', 'pibarber_lembrete_v1', 'pt_BR',
    'Olá {{1}}! Lembrete: você tem horário amanhã na {{2}}, às {{3}}, com {{4}}. Se não puder vir, cancele em {{5}} para liberar o horário.'),
   ('cancellation', 'pibarber_cancelamento_v1', 'pt_BR',
-   'Olá {{1}}! Seu horário na {{2}} em {{3}} às {{4}} foi cancelado. Você pode marcar outro em {{5}}.')
+   'Olá {{1}}! Seu horário na {{2}} em {{3}} às {{4}} foi cancelado. Marque outro em {{5}} quando quiser.')
 on conflict (event) do nothing;
 
 
