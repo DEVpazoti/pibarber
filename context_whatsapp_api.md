@@ -81,22 +81,20 @@ passos 3 e 6 não têm como funcionar.
 Sem assinar os campos, a mensagem fica em "Enviado" para sempre e o PARAR não
 funciona.
 
-### 4. Rodar a migração no Supabase
-**Onde:** painel do Supabase → **SQL Editor** → New query
-**Não depende do deploy** — dá para fazer agora
+### 4. ✅ Rodar a migração no Supabase — FEITA (19/09)
 
-- [ ] Colar o conteúdo de `supabase/24_whatsapp.sql` e rodar
-      (esperando o `SUPABASE_ACCESS_TOKEN` do Guilherme para eu fazer por aqui)
-- [ ] Ver a mensagem `24 aplicada — …` no fim
+- [x] `supabase/24_whatsapp.sql` aplicada no projeto `ovhzyyhopvrcowwvbqdk`
+- [x] `database.types.ts` regerado a partir do banco
 
-Conferir:
-```sql
-select count(*) from whatsapp_templates;   -- 3
-select count(*) from whatsapp_messages;    -- 0
-```
+Conferido depois de aplicar: **3** templates, **0** na fila, **0** policies nas
+tabelas de WhatsApp (elas são só da service role), **4** funções criadas e as
+**6** barbearias com as três mensagens ligadas.
 
-Enquanto não rodar: o site funciona normal, o cliente agenda, mas nenhuma
-mensagem entra na fila.
+Segurança conferida em produção: a chave anônima recebe `permission denied` nas
+três tabelas — ninguém de fora lê a fila nem os telefones.
+
+Bônus: **`pg_cron` e `pg_net` já estavam instalados** no projeto, então o passo
+8 não precisa ligar extensão nenhuma.
 
 ### 5. Publicar o app na Meta
 **Onde:** painel do app → seletor do topo, **Desenvolvimento → Ao vivo**
@@ -143,7 +141,8 @@ Sem isso: confirmação e cancelamento saem na hora, mas **lembrete nenhum sai**
 
 ## O que dá para fazer em paralelo
 
-Os passos **4, 5 e 7** não dependem do deploy — posso tocar agora.
+O passo **7** é só esperar a Meta. O **5** depende do deploy para a URL
+responder. Todo o resto agora depende dos passos 1 e 2.
 Os passos **3, 8 e 9** só depois de 1 e 2.
 
 ---

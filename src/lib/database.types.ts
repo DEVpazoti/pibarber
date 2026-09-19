@@ -1,9 +1,5 @@
 // GERADO pelo Supabase a partir do schema real. Nao edite na mao.
 // Para regerar: node supabase/aplicar-sql.mjs --tipos
-//
-// ⚠️ As partes de 24_whatsapp.sql (whatsapp_*, e as 3 colunas whatsapp_*_enabled
-// de barbershops) foram escritas à mão pelo agente 01, no formato do gerador,
-// porque o banco não estava ao alcance. Regere depois de aplicar a 24.
 
 export type Json =
   | string
@@ -17,7 +13,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.15"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -942,6 +938,44 @@ export type Database = {
           },
         ]
       }
+      public_booking_attempts: {
+        Row: {
+          barbershop_id: string | null
+          created_at: string
+          id: number
+          ip_hash: string
+          motivo: string | null
+          ok: boolean
+          phone: string | null
+        }
+        Insert: {
+          barbershop_id?: string | null
+          created_at?: string
+          id?: never
+          ip_hash: string
+          motivo?: string | null
+          ok?: boolean
+          phone?: string | null
+        }
+        Update: {
+          barbershop_id?: string | null
+          created_at?: string
+          id?: never
+          ip_hash?: string
+          motivo?: string | null
+          ok?: boolean
+          phone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_booking_attempts_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reviews: {
         Row: {
           appointment_id: string
@@ -1477,36 +1511,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      book_appointment: {
-        Args: {
-          p_dependent?: string
-          p_nome?: string
-          p_obs?: string
-          p_professional: string
-          p_profile?: string
-          p_quando: string
-          p_service_ids: string[]
-          p_shop: string
-          p_source?: Database["public"]["Enums"]["appointment_source"]
-          p_telefone?: string
-        }
-        Returns: string
-      }
-      can_manage_money: { Args: { shop: string }; Returns: boolean }
-      cancel_appointment: {
-        Args: { p_appointment: string; p_motivo?: string; p_por_quem?: string }
-        Returns: string
-      }
-      client_home: { Args: { p_profile?: string }; Returns: Json }
-      complete_appointment: {
-        Args: {
-          p_appointment: string
-          p_desconto?: number
-          p_pagamentos: Json
-          p_vencimento?: string
-        }
-        Returns: string
-      }
       agendamento_por_token: {
         Args: { p_token: string }
         Returns: {
@@ -1526,6 +1530,21 @@ export type Database = {
           total_price: number
         }[]
       }
+      book_appointment: {
+        Args: {
+          p_dependent?: string
+          p_nome?: string
+          p_obs?: string
+          p_professional: string
+          p_profile?: string
+          p_quando: string
+          p_service_ids: string[]
+          p_shop: string
+          p_source?: Database["public"]["Enums"]["appointment_source"]
+          p_telefone?: string
+        }
+        Returns: string
+      }
       book_appointment_publico: {
         Args: {
           p_ip_hash: string
@@ -1539,18 +1558,16 @@ export type Database = {
         }
         Returns: Json
       }
+      can_manage_money: { Args: { shop: string }; Returns: boolean }
+      cancel_appointment: {
+        Args: { p_appointment: string; p_motivo?: string; p_por_quem?: string }
+        Returns: string
+      }
       cancelar_por_token: {
         Args: { p_motivo?: string; p_token: string }
         Returns: boolean
       }
-      complete_appointments_lote: {
-        Args: { p_itens: Json }
-        Returns: number
-      }
-      reverter_status_agendamento: {
-        Args: { p_appointment: string }
-        Returns: string
-      }
+      client_home: { Args: { p_profile?: string }; Returns: Json }
       comissoes_do_dia: {
         Args: { p_dia?: string; p_shop: string }
         Returns: {
@@ -1562,10 +1579,21 @@ export type Database = {
           total_gerado: number
         }[]
       }
+      complete_appointment: {
+        Args: {
+          p_appointment: string
+          p_desconto?: number
+          p_pagamentos: Json
+          p_vencimento?: string
+        }
+        Returns: string
+      }
+      complete_appointments_lote: { Args: { p_itens: Json }; Returns: number }
       dashboard_summary: {
         Args: { p_ate?: string; p_de?: string; p_shop: string }
         Returns: Json
       }
+      ddd_valido: { Args: { p_ddd: string }; Returns: boolean }
       distancia_km: {
         Args: { lat1: number; lat2: number; lng1: number; lng2: number }
         Returns: number
@@ -1636,6 +1664,10 @@ export type Database = {
         Args: { p_payment: string }
         Returns: string
       }
+      reverter_status_agendamento: {
+        Args: { p_appointment: string }
+        Returns: string
+      }
       search_barbershops: {
         Args: {
           cidade?: string
@@ -1660,6 +1692,7 @@ export type Database = {
           state: string
         }[]
       }
+      token_ainda_vale: { Args: { p_ends_at: string }; Returns: boolean }
       whatsapp_dados_agendamentos: {
         Args: { p_ids: string[] }
         Returns: {
@@ -1683,10 +1716,6 @@ export type Database = {
         Args: { p_limite?: number }
         Returns: string[]
       }
-      whatsapp_reivindicar: {
-        Args: { p_id?: string; p_limite?: number }
-        Returns: Database["public"]["Tables"]["whatsapp_messages"]["Row"][]
-      }
       whatsapp_registrar_status: {
         Args: {
           p_codigo?: string
@@ -1696,6 +1725,33 @@ export type Database = {
           p_status: string
         }
         Returns: boolean
+      }
+      whatsapp_reivindicar: {
+        Args: { p_id?: string; p_limite?: number }
+        Returns: {
+          appointment_id: string | null
+          attempts: number
+          barbershop_id: string | null
+          created_at: string
+          delivered_at: string | null
+          event: Database["public"]["Enums"]["whatsapp_event"]
+          external_id: string | null
+          failure_code: string | null
+          failure_reason: string | null
+          id: string
+          params: Json
+          read_at: string | null
+          recipient: string
+          scheduled_for: string
+          sent_at: string | null
+          status: Database["public"]["Enums"]["whatsapp_status"]
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "whatsapp_messages"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
     }
     Enums: {
@@ -1741,12 +1797,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1770,11 +1826,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1795,11 +1851,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1820,11 +1876,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1837,11 +1893,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
