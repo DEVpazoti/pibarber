@@ -467,8 +467,8 @@ Classificação de erro (transitório ou não) em `classificarErro()`,
 - `AUDITORIA_BUGS.md` e `AUDITORIA_SEGURANCA.md` listam achados; conferir se o
   item em que você vai mexer já está catalogado antes de "descobrir" de novo.
 - `database.types.ts` é gerado à mão pelo painel do Supabase — fácil de esquecer.
-  **As partes da 24 foram escritas à mão pelo agente 01** (o banco não estava
-  ao alcance); regerar depois de aplicar a 24.
+  (As partes da 24, escritas à mão pelo agente 01, foram conferidas contra o
+  banco em 19/09 — bateram.)
 - Migrações rodadas manualmente: não há garantia de que produção e o banco local
   de um dev estejam no mesmo ponto. Confira antes de depender de coluna nova.
 
@@ -558,7 +558,7 @@ Rodado em 2026-09-15. "Local" = Postgres 16 em Docker com as migrações 01–23
 - [x] `npm run typecheck` e `npm run lint` limpos (a cada commit).
 - [x] `npm run build` passa **sem nenhuma variável de WhatsApp**. Agendar continua igual: sem env, `avisarPorWhatsapp` retorna antes de abrir conexão. *Não houve clique real no site nesta sessão.*
 - [x] `24_whatsapp.sql` roda duas vezes seguidas sem erro (local; portão final passou nas duas).
-- [~] `database.types.ts` acrescido à mão e o `typecheck` reflete as tabelas novas. **Regerar pelo banco** depois de aplicar a 24 em produção.
+- [x] `database.types.ts` — escrito à mão e, em 19/09, **regerado a partir do banco** depois de aplicar a 24. O que o gerador trouxe bate com o que estava escrito; `typecheck` e `lint` limpos.
 - [ ] ⏳ Confirmação chegando no celular — exige credenciais, número +55 e templates aprovados.
 - [ ] ⏳ Webhook marcando `delivered_at`/`read_at` com evento real da Meta. *Local: `whatsapp_registrar_status` com `read` antes de `delivered`, repetido, e `failed` depois de `read` → termina `read`, sem sobrescrever.*
 - [x] Webhook POST sem assinatura → 401; assinatura inválida → 401; corpo malformado → 400; válido → 200.
@@ -575,10 +575,12 @@ Rodado em 2026-09-15. "Local" = Postgres 16 em Docker com as migrações 01–23
 
 ### O que NÃO foi feito, e por quê
 
-- **A 24 não foi aplicada em produção**, os tipos não foram regerados pelo
-  banco, o `cron.schedule` não foi rodado e os templates não foram submetidos.
-  Tudo isso escreve em sistema de produção ou exige credencial da Meta que não
-  estava na máquina. Ordem para ativar: `docs/whatsapp.md` §1 → §6.
+- **Ativação (atualizado em 19/09):** a 24 FOI aplicada em produção e os tipos
+  foram regerados; os três templates foram submetidos e estão em análise
+  (PENDING) na WABA Pi Barber; o número +55 16 99305-5888 está registrado na
+  Cloud API. **Ainda falta:** subir o código para o GitHub, as variáveis na
+  Vercel, o webhook salvo na Meta, publicar o app e agendar o `cron.schedule`.
+  O roteiro com o estado de cada passo está em `context_whatsapp_api.md`.
 - **Confirmação no agendamento pelo balcão** (`criarAgendamento`): fora do
   escopo pedido. Quem marca no balcão costuma estar na frente do cliente.
 - **Marketing, conversa bidirecional, bot, Embedded Signup, mídia/botões,
