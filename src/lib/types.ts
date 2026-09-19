@@ -21,6 +21,9 @@ export type DebtStatus = Enums<"debt_status">;
 export type AppointmentSource = Enums<"appointment_source">;
 export type WaitlistStatus = Enums<"waitlist_status">;
 export type NotificationType = Enums<"notification_type">;
+export type WhatsappEvent = Enums<"whatsapp_event">;
+export type WhatsappStatus = Enums<"whatsapp_status">;
+export type WhatsappTemplateStatus = Enums<"whatsapp_template_status">;
 
 /* ==========================================================================
    Tabelas
@@ -49,6 +52,9 @@ export type Commission = Tables<"commissions">;
 export type Debt = Tables<"debts">;
 export type DebtPayment = Tables<"debt_payments">;
 export type AppNotification = Tables<"notifications">;
+/** A fila de WhatsApp. Só a service role lê — ver 24_whatsapp.sql. */
+export type WhatsappMessage = Tables<"whatsapp_messages">;
+export type WhatsappTemplate = Tables<"whatsapp_templates">;
 
 /* ==========================================================================
    Retorno de Server Action
@@ -174,6 +180,36 @@ export type EnderecoLocalizado = {
    * Governa se a tela sugere abrir o mapa para arrastar o pin.
    */
   precisao: "exata" | "aproximada";
+};
+
+/**
+ * O bloco "Mensagens de WhatsApp" de /painel/configuracoes, já pronto para
+ * desenhar. Montado no servidor por `carregarPainelWhatsapp()` — o telefone do
+ * cliente e o código cru de falha da Meta nunca chegam aqui.
+ */
+export type PainelWhatsapp = {
+  /** Há credencial da Meta neste ambiente? Sem ela nada sai, e a tela avisa. */
+  integracaoAtiva: boolean;
+  eventos: {
+    evento: WhatsappEvent;
+    ligado: boolean;
+    /** Nulo quando a migração 24 ainda não rodou neste banco. */
+    templateStatus: WhatsappTemplateStatus | null;
+    motivoReprovacao: string | null;
+    /** O texto como chega no celular, com os dados reais da barbearia. */
+    previa: string;
+  }[];
+  /** Os últimos 20 envios da loja. */
+  envios: {
+    id: string;
+    criadoEm: string;
+    /** O nome da ficha. Nunca o telefone. */
+    cliente: string | null;
+    evento: WhatsappEvent;
+    status: WhatsappStatus;
+    /** Já traduzida para o dono. Nula quando não falhou. */
+    falha: string | null;
+  }[];
 };
 
 /** O JSON que `client_home` devolve — a home do app em uma chamada. */

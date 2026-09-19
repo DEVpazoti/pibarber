@@ -658,6 +658,15 @@ export default function LandingPage() {
             >
               WhatsApp
             </a>
+            {/* A Meta exige esta URL para publicar o app do WhatsApp — e ela
+                precisa estar alcançável a partir do site, não só por link
+                direto. Ver docs/whatsapp.md. */}
+            <a
+              href="/privacidade"
+              className="inline-flex h-11 items-center px-3 transition-colors hover:text-brass"
+            >
+              Privacidade
+            </a>
           </nav>
         </div>
 
