@@ -61,9 +61,14 @@ node --no-warnings scripts/whatsapp-templates.mjs --listar
 Marcar **Production**. Nenhuma com prefixo `NEXT_PUBLIC_`.
 
 ### 2. Subir o código e fazer o deploy
-- [ ] Enviar o branch `agente-01-whatsapp` para o GitHub
-- [ ] Merge
-- [ ] **Redeploy** na Vercel (Deployments → ⋯ → Redeploy)
+**Repositório:** `github.com/DEVpazoti/pibarber` (branch padrão `main`)
+
+- [x] Branch `agente-01-whatsapp` enviado — 13 commits
+- [ ] Abrir o PR: https://github.com/DEVpazoti/pibarber/pull/new/agente-01-whatsapp
+- [ ] Merge no `main` → a Vercel faz o deploy de produção sozinha
+
+⚠️ **Não confundir com `RafaelVetrano/BARBER-VP`**: apesar do nome, é outro
+projeto (monorepo com apps/, packages/, Docker, pnpm). O PiBarber é este aqui.
 
 Hoje a rota do webhook responde **404** no ar. Enquanto isso não subir, os
 passos 3 e 6 não têm como funcionar.
