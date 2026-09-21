@@ -63,9 +63,12 @@ Marcar **Production**. Nenhuma com prefixo `NEXT_PUBLIC_`.
 ### 2. Subir o código e fazer o deploy
 **Repositório:** `github.com/DEVpazoti/pibarber` (branch padrão `main`)
 
-- [x] Branch `agente-01-whatsapp` enviado — 13 commits
-- [ ] Abrir o PR: https://github.com/DEVpazoti/pibarber/pull/new/agente-01-whatsapp
-- [ ] Merge no `main` → a Vercel faz o deploy de produção sozinha
+- [x] Branch enviado, PR #1 mergeado no `main`
+- [x] Deploy no ar — `/privacidade` responde 200 e `/api/webhooks/whatsapp`
+      responde 403 (rota existe e recusa token errado)
+
+⚠️ **"Redeploy" na Vercel reconstrói o MESMO commit** — não busca o que há de
+novo no GitHub. Foi o que confundiu aqui.
 
 ⚠️ **Não confundir com `RafaelVetrano/BARBER-VP`**: apesar do nome, é outro
 projeto (monorepo com apps/, packages/, Docker, pnpm). O PiBarber é este aqui.
@@ -73,15 +76,15 @@ projeto (monorepo com apps/, packages/, Docker, pnpm). O PiBarber é este aqui.
 Hoje a rota do webhook responde **404** no ar. Enquanto isso não subir, os
 passos 3 e 6 não têm como funcionar.
 
-### 3. Salvar o webhook na Meta
+### 3. ✅ Salvar o webhook na Meta — FEITO (19/09)
 **Onde:** painel do app → WhatsApp → Configuração → **Etapa 2** → Configurar webhooks
 **Depende de:** passos 1 e 2 prontos
 
-- [ ] URL de callback: `https://pibarber.vercel.app/api/webhooks/whatsapp`
-- [ ] Verificar token: o mesmo valor da variável
-- [ ] Clicar em **Verificar e salvar**
-- [ ] Em Campos do webhook → **Gerenciar** → assinar **`messages`** e
-      **`message_template_status_update`**
+- [x] URL de callback e token salvos — o app "Barber VP" está inscrito na WABA
+- [x] Conferido: o desafio responde certo com o token real, ou seja, o valor
+      na Vercel bate com o do painel
+- [ ] **Confirmar no painel** que os campos **`messages`** e
+      **`message_template_status_update`** estão assinados
 
 Sem assinar os campos, a mensagem fica em "Enviado" para sempre e o PARAR não
 funciona.
@@ -120,19 +123,21 @@ painel.
 
 Era o que evitava o erro `131042` em todo envio.
 
-### 7. Esperar a aprovação dos templates
-- [ ] Os três em **APPROVED**
+### 7. ✅ Templates aprovados — FEITO (19/09)
+- [x] Os três em **APPROVED** na Meta e já sincronizados no banco
 
 De minutos a 2 dias. **Enquanto estiverem PENDING, nenhuma mensagem sai** — e
 a tela do dono mostra "Em análise pela Meta", não erro.
 
-### 8. Agendar o cron dos lembretes
-**Onde:** Supabase → SQL Editor (`docs/whatsapp.md` §6.1)
-**Depende de:** passos 1, 2 e 4
+### 8. ✅ Cron agendado — FEITO (19/09)
+- [x] `pg_cron` e `pg_net` já estavam instalados
+- [x] `CRON_SECRET` guardado no Vault como `whatsapp_cron_secret`
+- [x] Job `whatsapp-despacho` ativo, a cada 5 minutos
 
-- [ ] Ligar `pg_cron` e `pg_net` em Database → Extensions
-- [ ] Guardar o `CRON_SECRET` no Vault como `whatsapp_cron_secret`
-- [ ] Rodar o `cron.schedule` de 5 em 5 minutos
+Testado à mão antes de agendar: o endpoint respondeu
+`{"ok":true,"templates":{"atualizados":3}}` — autenticou e sincronizou.
+
+Para parar: `select cron.unschedule('whatsapp-despacho');`
 
 Sem isso: confirmação e cancelamento saem na hora, mas **lembrete nenhum sai**.
 
