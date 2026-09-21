@@ -257,11 +257,17 @@ export default function PoliticaDePrivacidade() {
 
         <Secao titulo="8. Como apagar seus dados" id="exclusao-de-dados">
           <P>
-            <strong className="text-ink">Pelo aplicativo, na hora:</strong> entre na sua conta
-            e vá em <strong className="text-ink">Perfil → Meus dados</strong>. Ali você corrige
-            o que quiser e encontra a opção de encerrar a conta. Encerrando, o seu perfil, os
-            seus favoritos e o seu histórico de navegação na plataforma são removidos.
+            <strong className="text-ink">Pelo aplicativo, na hora:</strong> entre na sua conta,
+            vá em <strong className="text-ink">Perfil → Meus dados</strong> e toque em{" "}
+            <strong className="text-ink">Excluir conta</strong>. A exclusão é imediata e não
+            tem volta. Somem:
           </P>
+          <Lista>
+            <li>o seu perfil, o endereço e as pessoas que você agenda;</li>
+            <li>os favoritos e os últimos acessos;</li>
+            <li>as notificações e a lista de espera;</li>
+            <li>as avaliações que você escreveu.</li>
+          </Lista>
           <P>
             <strong className="text-ink">Por e-mail:</strong> se preferir, ou se não conseguir
             entrar na conta, escreva para{" "}
@@ -272,10 +278,12 @@ export default function PoliticaDePrivacidade() {
           </P>
           <P>
             <strong className="text-ink">O que não some junto, e por quê:</strong> o registro
-            dos atendimentos que você fez continua com a barbearia — é o documento comercial
-            dela, como a anotação num caderno de balcão, e pode ser exigido por obrigação
-            fiscal. Da mesma forma, se você pediu para não receber mensagens, guardamos o seu
-            número numa lista de dispensa: é justamente ela que impede você de voltar a receber.
+            dos atendimentos que você fez continua com a barbearia, mas{" "}
+            <strong className="text-ink">desligado da sua conta</strong> — é o documento
+            comercial dela, como a anotação num caderno de balcão, e pode ser exigido por
+            obrigação fiscal. Da mesma forma, se você pediu para não receber mensagens,
+            guardamos o seu número numa lista de dispensa: é justamente ela que impede você de
+            voltar a receber.
           </P>
           <P>
             Para entrar no WhatsApp: responda <strong className="text-ink">PARAR</strong> na
