@@ -667,6 +667,12 @@ export default function LandingPage() {
             >
               Privacidade
             </a>
+            <a
+              href="/termos"
+              className="inline-flex h-11 items-center px-3 transition-colors hover:text-brass"
+            >
+              Termos
+            </a>
           </nav>
         </div>
 
