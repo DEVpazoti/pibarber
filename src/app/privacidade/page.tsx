@@ -255,7 +255,35 @@ export default function PoliticaDePrivacidade() {
           </P>
         </Secao>
 
-        <Secao titulo="8. Os seus direitos">
+        <Secao titulo="8. Como apagar seus dados" id="exclusao-de-dados">
+          <P>
+            <strong className="text-ink">Pelo aplicativo, na hora:</strong> entre na sua conta
+            e vá em <strong className="text-ink">Perfil → Meus dados</strong>. Ali você corrige
+            o que quiser e encontra a opção de encerrar a conta. Encerrando, o seu perfil, os
+            seus favoritos e o seu histórico de navegação na plataforma são removidos.
+          </P>
+          <P>
+            <strong className="text-ink">Por e-mail:</strong> se preferir, ou se não conseguir
+            entrar na conta, escreva para{" "}
+            <a className="text-brass hover:underline" href={`mailto:${EMAIL_COMERCIAL}`}>
+              {EMAIL_COMERCIAL}
+            </a>{" "}
+            pedindo a exclusão. Respondemos em até 15 dias.
+          </P>
+          <P>
+            <strong className="text-ink">O que não some junto, e por quê:</strong> o registro
+            dos atendimentos que você fez continua com a barbearia — é o documento comercial
+            dela, como a anotação num caderno de balcão, e pode ser exigido por obrigação
+            fiscal. Da mesma forma, se você pediu para não receber mensagens, guardamos o seu
+            número numa lista de dispensa: é justamente ela que impede você de voltar a receber.
+          </P>
+          <P>
+            Para entrar no WhatsApp: responda <strong className="text-ink">PARAR</strong> na
+            conversa e as mensagens cessam na hora.
+          </P>
+        </Secao>
+
+        <Secao titulo="9. Os seus direitos">
           <P>A LGPD garante que você pode, a qualquer momento:</P>
           <Lista>
             <li>saber se tratamos dados seus e pedir acesso a eles;</li>
@@ -268,11 +296,11 @@ export default function PoliticaDePrivacidade() {
           <P>
             Boa parte disso você resolve sozinho, na hora, pelo aplicativo: os dados do perfil
             ficam em <strong className="text-ink">Perfil → Meus dados</strong>. Para o resto,
-            fale com a gente pelos canais do item 11 — respondemos em até 15 dias.
+            fale com a gente pelos canais do item 12 — respondemos em até 15 dias.
           </P>
         </Secao>
 
-        <Secao titulo="9. Segurança">
+        <Secao titulo="10. Segurança">
           <P>
             O acesso aos dados é controlado no próprio banco: cada pessoa só enxerga o que lhe
             pertence, e cada barbearia só enxerga os clientes dela. O tráfego é criptografado e
@@ -285,7 +313,7 @@ export default function PoliticaDePrivacidade() {
           </P>
         </Secao>
 
-        <Secao titulo="10. Crianças e adolescentes">
+        <Secao titulo="11. Crianças e adolescentes">
           <P>
             A conta é para maiores de 18 anos. Um responsável pode cadastrar um dependente
             (um filho, por exemplo) para agendar o atendimento dele — e nesse caso só pedimos o
@@ -293,7 +321,7 @@ export default function PoliticaDePrivacidade() {
           </P>
         </Secao>
 
-        <Secao titulo="11. Como falar com a gente">
+        <Secao titulo="12. Como falar com a gente">
           <P>
             Para qualquer dúvida sobre esta política ou para exercer os seus direitos:
           </P>
@@ -326,7 +354,7 @@ export default function PoliticaDePrivacidade() {
           </ul>
         </Secao>
 
-        <Secao titulo="12. Mudanças nesta política">
+        <Secao titulo="13. Mudanças nesta política">
           <P>
             Se algo mudar no que coletamos ou em como usamos, atualizamos esta página e a data
             do topo. Mudança relevante é avisada pelo aplicativo.
@@ -345,9 +373,19 @@ export default function PoliticaDePrivacidade() {
    Pedaços da página
    ========================================================================== */
 
-function Secao({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+function Secao({
+  titulo,
+  id,
+  children,
+}: {
+  titulo: string;
+  /** Vira âncora (`/privacidade#id`). A Meta aponta o campo de exclusão de
+      dados para a seção 8 — se o id mudar, o link do painel quebra. */
+  id?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <section className="mt-8">
+    <section className="mt-8" id={id}>
       <h2 className="text-lg font-semibold text-ink">{titulo}</h2>
       <div className="mt-2 flex flex-col gap-3">{children}</div>
     </section>
