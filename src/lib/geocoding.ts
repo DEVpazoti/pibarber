@@ -21,14 +21,31 @@ import type { EnderecoLocalizado } from "@/lib/types";
  * arrastável de graça. Paga-se onde a precisão importa — a resolução do
  * endereço —, não onde não importa.
  *
+ * ---------------------------------------------------------------------------
+ * E QUANDO NÃO HÁ CHAVE: OpenStreetMap (Nominatim), de graça
+ * ---------------------------------------------------------------------------
+ * Até setembro/2026 a falta da `GOOGLE_MAPS_API_KEY` deixava o botão
+ * "Localizar pelo endereço" MORTO: ele respondia "a busca não está configurada
+ * neste ambiente". E a chave nunca tinha sido configurada — nem local, nem em
+ * produção —, então o botão nunca funcionou para ninguém.
+ *
+ * Agora o Nominatim entra quando não há chave OU quando o Google falha (cota,
+ * billing desligado, rede). Ele é gratuito e não pede cadastro; a precisão
+ * costuma ser de RUA, não de porta — o que vira "aproximada" na tela e sugere
+ * conferir no mapa. Para o filtro "Próximas", que usa raio de 25 km, uma rua
+ * de diferença não muda nada.
+ *
+ * ⚠️ A política de uso do Nominatim exige: User-Agent que identifique o app,
+ * no máximo 1 requisição por segundo, e nada de uso em massa. Um dono tocando
+ * num botão cabe folgado — mas NÃO use isto em lote (importação, script de
+ * migração, backfill). Para volume, configure a chave do Google.
+ *
  * NUNCA LANÇA por causa de resposta ruim: geocoding que falha não pode travar
  * o cadastro da barbearia. Devolve `{ ok: false, motivo }` e quem chama decide
  * o que dizer na tela.
  */
 
 export type FalhaGeocoding =
-  /** Falta a `GOOGLE_MAPS_API_KEY`. Só acontece em ambiente não configurado. */
-  | "sem_chave"
   /** O endereço não existe, ou está incompleto demais para achar. */
   | "nao_encontrado"
   /** Cota estourada, chave recusada, rede fora. Tentar de novo pode resolver. */
@@ -70,14 +87,16 @@ type RespostaGoogle = {
  * homônima melhor que qualquer outra parte. O complemento fica de fora de
  * propósito — "fundos", "sala 2" só confunde o geocoder.
  */
-export function linhaDeEndereco(partes: {
+export type PartesDoEndereco = {
   rua?: string;
   numero?: string;
   bairro?: string;
   cidade?: string;
   estado?: string;
   cep?: string;
-}): string {
+};
+
+export function linhaDeEndereco(partes: PartesDoEndereco): string {
   const rua = partes.rua?.trim();
   const numero = partes.numero?.trim();
   const cep = partes.cep?.replace(/\D/g, "");
@@ -123,15 +142,39 @@ export function erroDeCoordenada(
   return null;
 }
 
-/** A chave está configurada? A tela usa isto para não oferecer um botão morto. */
-export function geocodingConfigurado(): boolean {
-  return Boolean(process.env.GOOGLE_MAPS_API_KEY?.trim());
+/**
+ * Resolve o endereço. Google primeiro, se houver chave; OpenStreetMap quando
+ * não houver, ou quando o Google falhar.
+ *
+ * "Não encontrado" do Google também passa pelo OpenStreetMap: os dois têm
+ * bases diferentes, e rua nova de loteamento às vezes existe só em um deles.
+ */
+export async function geocodificar(partes: PartesDoEndereco): Promise<ResultadoGeocoding> {
+  const chave = process.env.GOOGLE_MAPS_API_KEY?.trim();
+
+  if (chave) {
+    const google = await viaGoogle(linhaDeEndereco(partes), chave);
+    if (google.ok) return google;
+
+    const osm = await viaOpenStreetMap(partes);
+    if (osm.ok) return osm;
+
+    // Os dois falharam. "Não encontrado" é a informação mais útil para o dono
+    // (ele pode corrigir a rua); "indisponível" só se nenhum dos dois achou
+    // que o endereço existe.
+    return google.motivo === "nao_encontrado" || osm.motivo === "nao_encontrado"
+      ? { ok: false, motivo: "nao_encontrado" }
+      : { ok: false, motivo: "indisponivel" };
+  }
+
+  return viaOpenStreetMap(partes);
 }
 
-export async function geocodificar(endereco: string): Promise<ResultadoGeocoding> {
-  const chave = process.env.GOOGLE_MAPS_API_KEY?.trim();
-  if (!chave) return { ok: false, motivo: "sem_chave" };
+/* ==========================================================================
+   Google
+   ========================================================================== */
 
+async function viaGoogle(endereco: string, chave: string): Promise<ResultadoGeocoding> {
   const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
   url.searchParams.set("address", endereco);
   url.searchParams.set("key", chave);
@@ -192,4 +235,104 @@ export async function geocodificar(endereco: string): Promise<ResultadoGeocoding
     console.error("[geocoding] falha na consulta:", error);
     return { ok: false, motivo: "indisponivel" };
   }
+}
+
+/* ==========================================================================
+   OpenStreetMap (Nominatim)
+   ========================================================================== */
+
+type RespostaNominatim = Array<{
+  lat?: string;
+  lon?: string;
+  display_name?: string;
+  /** "house", "building", "road", "suburb", "postcode"… */
+  addresstype?: string;
+}>;
+
+/** Nominatim devolve porta só quando acha o número. O resto é rua ou região. */
+function precisaoOsm(tipo: string | undefined): EnderecoLocalizado["precisao"] {
+  return tipo === "house" || tipo === "building" ? "exata" : "aproximada";
+}
+
+/** A política do Nominatim pede no máximo 1 requisição por segundo. */
+const INTERVALO_NOMINATIM_MS = 1100;
+
+async function viaOpenStreetMap(partes: PartesDoEndereco): Promise<ResultadoGeocoding> {
+  const rua = partes.rua?.trim();
+  const numero = partes.numero?.trim();
+  const cidade = partes.cidade?.trim();
+  const estado = partes.estado?.trim();
+  const cep = partes.cep?.replace(/\D/g, "");
+  const cepFormatado = cep && cep.length === 8 ? `${cep.slice(0, 5)}-${cep.slice(5)}` : undefined;
+
+  // Do mais preciso ao mais largo. Para na primeira que achar.
+  //
+  // O CEP sai da segunda tentativa de propósito: o OpenStreetMap tem muito CEP
+  // desatualizado. No teste real, "R Albano José de Carvalho, CEP 14091-400"
+  // estava cadastrada com 14091-450 — e com o CEP junto, a busca não bate.
+  // A última tentativa é só o CEP: acha o centro dele, que ainda serve para o
+  // filtro "Próximas".
+  const tentativas: Array<Record<string, string>> = [];
+  if (rua && cidade) {
+    const street = numero ? `${numero} ${rua}` : rua;
+    if (cepFormatado) {
+      tentativas.push({ street, city: cidade, ...(estado && { state: estado }), postalcode: cepFormatado });
+    }
+    tentativas.push({ street, city: cidade, ...(estado && { state: estado }) });
+  }
+  if (cepFormatado) tentativas.push({ postalcode: cepFormatado });
+
+  if (tentativas.length === 0) return { ok: false, motivo: "nao_encontrado" };
+
+  let houveFalha = false;
+
+  for (const [i, campos] of tentativas.entries()) {
+    if (i > 0) await new Promise((r) => setTimeout(r, INTERVALO_NOMINATIM_MS));
+
+    const url = new URL("https://nominatim.openstreetmap.org/search");
+    url.searchParams.set("format", "jsonv2");
+    url.searchParams.set("limit", "1");
+    url.searchParams.set("countrycodes", "br");
+    url.searchParams.set("accept-language", "pt-BR");
+    for (const [chave, valor] of Object.entries(campos)) url.searchParams.set(chave, valor);
+
+    try {
+      const resposta = await fetch(url, {
+        headers: {
+          Accept: "application/json",
+          // Obrigatório pela política de uso. Sem ele, o Nominatim bloqueia.
+          "User-Agent": "PiBarber/1.0 (+https://pibarber.vercel.app)",
+        },
+        signal: AbortSignal.timeout(8000),
+        cache: "no-store",
+      });
+
+      if (!resposta.ok) {
+        console.error("[geocoding] nominatim não-ok:", resposta.status);
+        houveFalha = true;
+        continue;
+      }
+
+      const [primeiro] = (await resposta.json()) as RespostaNominatim;
+      const lat = Number(primeiro?.lat);
+      const lng = Number(primeiro?.lon);
+      if (!primeiro || !Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+
+      return {
+        ok: true,
+        endereco: {
+          latitude: lat,
+          longitude: lng,
+          enderecoFormatado: primeiro.display_name?.trim() || linhaDeEndereco(partes),
+          // Achou só pelo CEP é, por definição, aproximado — é o centro dele.
+          precisao: campos.street ? precisaoOsm(primeiro.addresstype) : "aproximada",
+        },
+      };
+    } catch (error) {
+      console.error("[geocoding] falha no nominatim:", error);
+      houveFalha = true;
+    }
+  }
+
+  return { ok: false, motivo: houveFalha ? "indisponivel" : "nao_encontrado" };
 }
