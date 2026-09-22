@@ -137,10 +137,10 @@ na ordem. Não há CLI de migração neste projeto.
 03_rls.sql         policies e grants
 04_seed.sql        4 barbearias de exemplo
 05–06              operação (promover admin, apagar dados)
-07…24              migrações incrementais (24 = WhatsApp)
+07…25              migrações incrementais (24 = WhatsApp, 25 = conserto do lembrete)
 ```
 
-**A próxima migração é a `25_`.** Regras para escrever uma:
+**A próxima migração é a `26_`.** Regras para escrever uma:
 
 - Idempotente de ponta a ponta. `create table if not exists`, `do $$ ... exception
   when duplicate_object then null; end $$` para enums e constraints, `create index
@@ -360,7 +360,7 @@ Não confundir com `barbershops.whatsapp` (contato da loja, só link `wa.me` —
 | Evento | Quando | Onde nasce | Template |
 |---|---|---|---|
 | `confirmation` | Agendou pelo app (`agendar`) ou pelo link público (`agendarSemLogin`) | Server Action → `avisarPorWhatsapp` | `pibarber_confirmacao_v1` |
-| `reminder` | 18h da véspera (ou já, se esse instante passou) | Cron → `varrerLembretes` | `pibarber_lembrete_v1` |
+| `reminder` | 18h da véspera. **Quem agenda depois desse instante não recebe** (25) | Cron → `varrerLembretes` | `pibarber_lembrete_v2` |
 | `cancellation` | Cancelou pelo painel (`cancelarAgendamento`), pelo app (`cancelarMeuAgendamento`) ou pelo link (`cancelarPorToken`) | Server Action → `avisarPorWhatsapp` | `pibarber_cancelamento_v1` |
 
 Agendamento criado **pelo balcão** (`criarAgendamento`) não gera confirmação,
@@ -496,7 +496,7 @@ Criadas pelo agente 01:
   - Cancelar → desfazer → cancelar de novo manda UM aviso de cancelamento só (índice único).
   - Desfazer um cancelamento não reenfileira o lembrete: `reminder_sent_at` já estava preenchido.
   - Status do webhook que chega antes de o envio gravar o `wamid` se perde. É raro; a linha fica `sent`.
-  - Quem agenda depois das 18h da véspera recebe confirmação e lembrete quase juntos. É a regra pedida ("se o instante passou, agora").
+  - ~~Quem agenda depois das 18h da véspera recebe confirmação e lembrete quase juntos.~~ **CORRIGIDO na 25**: virou bug em produção (o lembrete dizia "amanhã" para um atendimento de hoje). Agora esse caso não gera lembrete, e o dia é parâmetro do template.
   - A palavra de saída "cancelar" pode ser escrita por quem queria cancelar o HORÁRIO. A pessoa sai da lista e o horário não é cancelado. Está na lista porque foi pedido; reavaliar com dado de uso.
 
 ---
