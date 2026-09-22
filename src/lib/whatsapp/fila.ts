@@ -75,11 +75,28 @@ function linkDaMensagem(evento: EventoWhatsapp, linha: DadosDoAgendamento): stri
   return absoluta(`/b/${linha.barbearia_slug}`);
 }
 
+/**
+ * "hoje", "amanhã" ou "sexta, 26/09" — o {{2}} do lembrete.
+ *
+ * ⚠️ NÃO volte a escrever "amanhã" dentro do texto do template. Em 22/09/2026
+ * o lembrete saiu dizendo "amanhã" para um atendimento do MESMO dia, quatro
+ * minutos depois da confirmação. O dia é calculado no envio justamente porque
+ * o lembrete pode sair atrasado — cron fora do ar, por exemplo.
+ */
+export function palavraDoDia(iso: string, agora = new Date()): string {
+  const dia = paraDataISO(iso);
+  const hoje = paraDataISO(agora);
+  if (dia === hoje) return "hoje";
+  if (dia === somarDias(hoje, 1)) return "amanhã";
+  return diaParaMensagem(iso);
+}
+
 export function dadosDaMensagem(evento: EventoWhatsapp, linha: DadosDoAgendamento): DadosMensagem {
   return {
     nome: linha.cliente_nome,
     barbearia: linha.barbearia,
     data: diaParaMensagem(linha.starts_at),
+    quando: palavraDoDia(linha.starts_at),
     hora: horaBR(linha.starts_at),
     profissional: linha.profissional,
     link: linkDaMensagem(evento, linha),
