@@ -9,7 +9,7 @@ O que o PiBarber manda, e quando:
 | Mensagem | Quando sai | Template na Meta |
 |---|---|---|
 | Confirmação | Assim que o cliente agenda (app ou link público) | `pibarber_confirmacao_v1` |
-| Lembrete | Às 18h da véspera do atendimento | `pibarber_lembrete_v1` |
+| Lembrete | Às 18h da véspera, só para quem agendou antes disso | `pibarber_lembrete_v2` |
 | Cancelamento | Quando o horário é cancelado (painel, app ou link) | `pibarber_cancelamento_v1` |
 
 As três vão do **número da plataforma**, não da barbearia. Os textos estão em
@@ -199,11 +199,11 @@ Olá {{1}}! Seu horário na {{2}} está confirmado para {{3}} às {{4}} com {{5}
 ```
 Exemplos: `João` · `Barbearia do Zé` · `sexta, 18/09` · `14:30` · `Carlos` · `https://pibarber.vercel.app/app/agendamentos`
 
-**`pibarber_lembrete_v1`**
+**`pibarber_lembrete_v2`**
 ```
-Olá {{1}}! Lembrete: você tem horário amanhã na {{2}}, às {{3}}, com {{4}}. Se não puder vir, cancele em {{5}} para liberar o horário.
+Olá {{1}}! Lembrete: você tem horário {{2}} na {{3}}, às {{4}}, com {{5}}. Se não puder vir, cancele em {{6}} para liberar o horário.
 ```
-Exemplos: `João` · `Barbearia do Zé` · `14:30` · `Carlos` · `https://pibarber.vercel.app/app/agendamentos`
+Exemplos: `João` · `amanhã` · `Barbearia do Zé` · `14:30` · `Carlos` · `https://pibarber.vercel.app/app/agendamentos`
 
 **`pibarber_cancelamento_v1`**
 ```
