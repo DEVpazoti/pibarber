@@ -41,7 +41,22 @@ export type EventoWhatsapp = "confirmation" | "reminder" | "cancellation";
 export const EVENTOS: readonly EventoWhatsapp[] = ["confirmation", "reminder", "cancellation"];
 
 /** Os pedaços de informação que um template pode pedir. */
-export type CampoMensagem = "nome" | "barbearia" | "data" | "hora" | "profissional" | "link";
+export type CampoMensagem =
+  | "nome"
+  | "barbearia"
+  /** A data por extenso: "sexta, 18/09". */
+  | "data"
+  /**
+   * "hoje", "amanhã" ou "sexta, 26/09" — calculado na hora do envio.
+   *
+   * Existe por causa de um bug visto em produção (22/09/2026): o lembrete
+   * tinha a palavra "amanhã" escrita no texto, e saía dizendo isso para um
+   * atendimento do MESMO dia. Ver supabase/25_lembrete_diz_o_dia.sql.
+   */
+  | "quando"
+  | "hora"
+  | "profissional"
+  | "link";
 
 export type DadosMensagem = Partial<Record<CampoMensagem, string | null | undefined>>;
 
@@ -85,16 +100,17 @@ export const CATALOGO: Readonly<Record<EventoWhatsapp, TemplateDoCatalogo>> = {
   },
   reminder: {
     evento: "reminder",
-    nomeMeta: "pibarber_lembrete_v1",
+    nomeMeta: "pibarber_lembrete_v2",
     idioma: "pt_BR",
     categoria: "UTILITY",
     rotulo: "Lembrete",
-    quando: "Às 18h da véspera do atendimento.",
+    quando: "Às 18h da véspera — só para quem agendou antes disso.",
     texto:
-      "Olá {{1}}! Lembrete: você tem horário amanhã na {{2}}, às {{3}}, com {{4}}. Se não puder vir, cancele em {{5}} para liberar o horário.",
-    campos: ["nome", "barbearia", "hora", "profissional", "link"],
+      "Olá {{1}}! Lembrete: você tem horário {{2}} na {{3}}, às {{4}}, com {{5}}. Se não puder vir, cancele em {{6}} para liberar o horário.",
+    campos: ["nome", "quando", "barbearia", "hora", "profissional", "link"],
     exemplo: [
       "João",
+      "amanhã",
       "Barbearia do Zé",
       "14:30",
       "Carlos",
