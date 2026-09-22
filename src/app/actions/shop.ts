@@ -210,15 +210,9 @@ export async function geocodificarEndereco(
       return falha("Preencha ao menos a rua e a cidade — ou o CEP, que preenche os dois.");
     }
 
-    const resultado = await geocodificar(linha);
+    const resultado = await geocodificar(partes);
 
     if (!resultado.ok) {
-      if (resultado.motivo === "sem_chave") {
-        return falha(
-          "A busca por endereço não está configurada neste ambiente. " +
-            "Use “Usar minha localização atual” ou marque o ponto no mapa.",
-        );
-      }
       if (resultado.motivo === "nao_encontrado") {
         return falha(
           "Não achei esse endereço. Confira a rua e o número, ou marque o ponto no mapa.",
