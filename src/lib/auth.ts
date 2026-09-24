@@ -1,11 +1,13 @@
 import "server-only";
 
+import { cookies, headers } from "next/headers";
 import { unstable_rethrow } from "next/navigation";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 
 import { createClient } from "@/lib/supabase/server";
 import type { Profile, ShopContext, SubscriptionStatus, UserRole } from "@/lib/types";
+import { COOKIE_VISUALIZACAO, lojaDoCookie, ModoSomenteLeitura } from "@/lib/visualizacao";
 
 /**
  * ARMADILHA QUE CUSTA CARO — leia antes de mexer em qualquer catch daqui.
@@ -96,6 +98,56 @@ export async function requireAdmin(): Promise<Profile> {
  * profiles.barbershop_id. Se não houver nenhuma, não há painel para mostrar.
  */
 export const requireShopContext = cache(async (): Promise<ShopContext> => {
+  // "Ver como o dono": o admin abre o painel de uma loja em somente leitura.
+  // Qualquer server action nesse modo é recusada AQUI — é a porta por onde
+  // todas as actions do painel passam, então nenhuma escapa.
+  const visualizacao = await contextoDeVisualizacao();
+  if (visualizacao) {
+    if ((await headers()).get("next-action")) throw new ModoSomenteLeitura();
+    return visualizacao;
+  }
+  return contextoDoPainel();
+});
+
+/**
+ * O contexto do modo visualização, ou null se ele não está ativo.
+ *
+ * Só vale para admin da plataforma, com o cookie apontando para uma loja que
+ * existe. Qualquer outra coisa (cookie forjado por um dono, loja apagada)
+ * volta null e o painel segue o caminho normal.
+ */
+async function contextoDeVisualizacao(): Promise<ShopContext | null> {
+  const perfil = await getProfile();
+  if (!perfil?.is_platform_admin) return null;
+
+  const shopId = lojaDoCookie((await cookies()).get(COOKIE_VISUALIZACAO)?.value);
+  if (!shopId) return null;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("barbershops")
+    .select("id, name")
+    .eq("id", shopId)
+    .maybeSingle();
+
+  if (error) console.error("[auth] falha ao abrir a visualização:", error);
+  if (!data) return null;
+
+  return {
+    profile: perfil,
+    shopId: data.id,
+    shopName: data.name,
+    // O painel é mostrado como está: sem mandar para o setup nem para a tela
+    // de assinatura, que são do dono.
+    setupConcluido: true,
+    assinaturaLiberada: true,
+    assinatura: null,
+    podeVerDinheiro: true,
+    somenteLeitura: true,
+  };
+}
+
+async function contextoDoPainel(): Promise<ShopContext> {
   const perfil = await requireRole(["owner", "assistant"]);
 
   try {
@@ -121,7 +173,7 @@ export const requireShopContext = cache(async (): Promise<ShopContext> => {
       const { data, error } = await supabase
         .from("barbershops")
         .select(
-          "id, name, setup_completed_at, assinatura_em_dia, subscriptions(status, trial_ends_at, paid_until, asaas_subscription_id, asaas_installment_id)",
+          "id, name, setup_completed_at, assinatura_em_dia, subscriptions(status, trial_ends_at, paid_until, asaas_subscription_id, asaas_installment_id, plano:plans!subscriptions_plan_id_fkey(name))",
         )
         .eq("owner_id", perfil.id)
         .order("created_at", { ascending: true })
@@ -140,6 +192,7 @@ export const requireShopContext = cache(async (): Promise<ShopContext> => {
               paid_until: string | null;
               asaas_subscription_id: string | null;
               asaas_installment_id: string | null;
+              plano: { name: string } | null;
             } | null;
           },
           { merge: false }
@@ -156,6 +209,13 @@ export const requireShopContext = cache(async (): Promise<ShopContext> => {
             status: data.subscriptions.status,
             trialEndsAt: data.subscriptions.trial_ends_at,
             paidUntil: data.subscriptions.paid_until,
+            // O nome do plano só enquanto há período PAGO em vigor — no teste
+            // grátis não há plano para mostrar (a etiqueta do menu some).
+            planoPago:
+              data.subscriptions.paid_until &&
+              new Date(data.subscriptions.paid_until) > new Date()
+                ? (data.subscriptions.plano?.name ?? null)
+                : null,
             // Parcelado no cartão é cobrança avulsa: não renova sozinho.
             renovaSozinho: !(
               data.subscriptions.asaas_installment_id && !data.subscriptions.asaas_subscription_id
@@ -193,6 +253,7 @@ export const requireShopContext = cache(async (): Promise<ShopContext> => {
       setupConcluido,
       assinaturaLiberada,
       assinatura,
+      somenteLeitura: false,
       // Dinheiro é só do dono. A RLS impõe o mesmo no banco — isto aqui só
       // evita renderizar (e buscar) o que o assistente não pode ver.
       podeVerDinheiro: perfil.role === "owner" || perfil.is_platform_admin,
@@ -202,7 +263,7 @@ export const requireShopContext = cache(async (): Promise<ShopContext> => {
     console.error("[auth] erro inesperado em requireShopContext:", error);
     redirect("/entrar");
   }
-});
+}
 
 /** Só o dono passa. Use no topo de caixa, comissões, relatórios e equipe. */
 export async function requireOwnerContext(): Promise<ShopContext> {

@@ -7,6 +7,7 @@ import { useState } from "react";
 
 import { sair } from "@/app/actions/auth";
 import { Logo } from "@/components/Logo";
+import { BotaoFeedback } from "@/components/painel/BotaoFeedback";
 import { Suporte } from "@/components/Suporte";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { cn } from "@/lib/utils";
@@ -46,11 +47,20 @@ export function PainelNav({
   podeVerDinheiro,
   nome,
   nomeBarbearia,
+  planoAtual = null,
+  shopId,
+  somenteLeitura = false,
   pendencias = 0,
 }: {
   podeVerDinheiro: boolean;
   nome: string;
   nomeBarbearia: string;
+  /** Nome do plano pago em vigor. Nulo no teste grátis e para o assistente. */
+  planoAtual?: string | null;
+  /** A loja do painel — pasta do print no "Reportar problema". */
+  shopId: string;
+  /** "Ver como o dono": sem "Reportar problema" (sairia em nome do admin). */
+  somenteLeitura?: boolean;
   /** Atendimentos de dias anteriores sem conclusão. Alimenta o badge. */
   pendencias?: number;
 }) {
@@ -79,14 +89,16 @@ export function PainelNav({
           <ThemeToggle />
         </div>
 
-        <div className="border-y border-line px-4 py-3">
-          <p className="truncate text-sm font-semibold text-ink">{nomeBarbearia}</p>
-          <p className="truncate text-xs text-ink-faint">
-            {nome}
-            {!podeVerDinheiro ? " · assistente" : ""}
-          </p>
+        <div className="flex items-start gap-2 border-y border-line px-4 py-3">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-ink">{nomeBarbearia}</p>
+            <p className="truncate text-xs text-ink-faint">
+              {nome}
+              {!podeVerDinheiro ? " · assistente" : ""}
+            </p>
+          </div>
+          {planoAtual ? <EtiquetaPlano nome={planoAtual} /> : null}
         </div>
-
         <nav className="flex-1 overflow-y-auto p-3">
           <ul className="flex flex-col gap-0.5">
             {itens.map(({ href, rotulo, Icone, temBadge }) => {
@@ -115,7 +127,11 @@ export function PainelNav({
 
         {/* Suporte sempre à mão: é rodapé, não rota — uma tela nova custaria
             uma ida e volta ao banco para mostrar dois links. */}
-        <Suporte variante="rodape" className="border-t border-line p-3" />
+        <Suporte
+          variante="rodape"
+          className="border-t border-line p-3"
+          antes={somenteLeitura ? null : <BotaoFeedback shopId={shopId} />}
+        />
 
         <form action={sair} className="border-t border-line p-3">
           <button
@@ -132,7 +148,10 @@ export function PainelNav({
       <header className="sticky top-0 z-30 border-b border-line bg-bg/90 backdrop-blur lg:hidden">
         <div className="flex h-14 items-center justify-between px-4">
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-ink">{nomeBarbearia}</p>
+            <p className="flex min-w-0 items-center gap-2">
+              <span className="truncate text-sm font-semibold text-ink">{nomeBarbearia}</span>
+              {planoAtual ? <EtiquetaPlano nome={planoAtual} /> : null}
+            </p>
             <p className="truncate text-xs text-ink-faint">
               {nome}
               {!podeVerDinheiro ? " · assistente" : ""}
@@ -239,7 +258,11 @@ export function PainelNav({
               ))}
             </ul>
 
-            <Suporte variante="rodape" className="border-t border-line p-3" />
+            <Suporte
+              variante="rodape"
+              className="border-t border-line p-3"
+              antes={somenteLeitura ? null : <BotaoFeedback shopId={shopId} />}
+            />
 
             <form action={sair} className="border-t border-line p-3">
               <button
@@ -254,5 +277,21 @@ export function PainelNav({
         </div>
       ) : null}
     </>
+  );
+}
+
+/**
+ * O plano pago, ao lado do nome da barbearia. Leva à tela de assinatura: é o
+ * atalho natural para quem quer ver até quando está pago ou trocar de plano.
+ */
+function EtiquetaPlano({ nome }: { nome: string }) {
+  return (
+    <Link
+      href="/assinatura"
+      title={`Plano ${nome} — ver assinatura`}
+      className="shrink-0 rounded-full bg-brass-soft px-2 py-0.5 text-[11px] font-semibold text-brass-deep transition-colors hover:bg-brass hover:text-brass-ink"
+    >
+      {nome}
+    </Link>
   );
 }

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { BarraVisualizacao } from "@/components/painel/BarraVisualizacao";
 import { FaixaAssinatura } from "@/components/painel/FaixaAssinatura";
 import { PainelNav } from "@/components/painel/PainelNav";
 import { requireShopContext } from "@/lib/auth";
@@ -27,6 +28,7 @@ export default async function PainelLayout({ children }: { children: React.React
     setupConcluido,
     assinaturaLiberada,
     assinatura,
+    somenteLeitura,
   } = await requireShopContext();
 
   // Dono de loja recém-criada ainda sem horário, serviço e profissional: o
@@ -57,10 +59,14 @@ export default async function PainelLayout({ children }: { children: React.React
 
   return (
     <div className="min-h-dvh bg-bg">
+      {somenteLeitura ? <BarraVisualizacao nomeBarbearia={nomeBarbearia} /> : null}
       <PainelNav
         podeVerDinheiro={podeVerDinheiro}
         nome={primeiroNome(profile.full_name) || "Você"}
         nomeBarbearia={nomeBarbearia}
+        planoAtual={podeVerDinheiro ? (assinatura?.planoPago ?? null) : null}
+        shopId={shopId}
+        somenteLeitura={somenteLeitura}
         pendencias={pendencias}
       />
 

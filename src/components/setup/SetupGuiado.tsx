@@ -59,7 +59,13 @@ import {
 
 export type PassoDoSetup = "barbearia" | "endereco" | "horario" | "servicos" | "equipe" | "regras";
 
-const PASSOS: { id: PassoDoSetup; titulo: string; descricao: string }[] = [
+const PASSOS: {
+  id: PassoDoSetup;
+  titulo: string;
+  descricao: string;
+  /** Etiqueta discreta ao lado do título (ex.: "Dá para mudar depois"). */
+  etiqueta?: string;
+}[] = [
   {
     id: "barbearia",
     titulo: "Sua barbearia",
@@ -74,6 +80,7 @@ const PASSOS: { id: PassoDoSetup; titulo: string; descricao: string }[] = [
     id: "horario",
     titulo: "Horário de funcionamento",
     descricao: "Só dá para agendar dentro dele.",
+    etiqueta: "Dá para mudar depois",
   },
   {
     id: "servicos",
@@ -178,7 +185,14 @@ export function SetupGuiado({
               <p className="text-xs font-medium uppercase tracking-wide text-brass">
                 Passo {indice + 1} de {PASSOS.length}
               </p>
-              <h1 className="mt-1 text-2xl text-ink sm:text-3xl">{passo.titulo}</h1>
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                <h1 className="text-2xl text-ink sm:text-3xl">{passo.titulo}</h1>
+                {passo.etiqueta ? (
+                  <span className="rounded-full border border-brass/40 bg-brass-soft px-2.5 py-0.5 text-xs font-medium text-brass-deep">
+                    {passo.etiqueta}
+                  </span>
+                ) : null}
+              </div>
               <p className="mt-1 text-sm text-ink-soft">{passo.descricao}</p>
             </div>
 

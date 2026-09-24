@@ -14,6 +14,7 @@ import { Button, Chip } from "@/components/ui";
 import {
   CICLOS,
   DIAS_PARA_RENOVAR,
+  situacaoDaFatura,
   diasAte,
   faixaDoPlano,
   fimDaTolerancia,
@@ -525,13 +526,8 @@ function Caixa({
 }
 
 function StatusFatura({ status }: { status: string }) {
-  const s = status.toUpperCase();
-  if (s === "RECEIVED" || s === "CONFIRMED" || s === "RECEIVED_IN_CASH") {
-    return <Chip tom="money">Paga</Chip>;
-  }
-  if (s === "OVERDUE") return <Chip tom="danger">Vencida</Chip>;
-  if (s === "REFUNDED") return <Chip tom="neutro">Estornada</Chip>;
-  return <Chip tom="neutro">Em aberto</Chip>;
+  const { texto, tom } = situacaoDaFatura(status);
+  return <Chip tom={tom}>{texto}</Chip>;
 }
 
 /* ==========================================================================

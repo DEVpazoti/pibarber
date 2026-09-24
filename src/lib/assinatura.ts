@@ -54,3 +54,39 @@ export function fimDaTolerancia(paidUntil: string): Date {
  * do fim do período pago — a tela oferece "Renovar" e a action aceita.
  */
 export const DIAS_PARA_RENOVAR = 15;
+
+/**
+ * A situação de uma fatura (status do Asaas) em português, com o tom da
+ * etiqueta. Um mapa só para a tela do dono e a do /admin: antes, cada uma
+ * tratava alguns status e o resto caía em "Em aberto" — inclusive fatura
+ * CANCELADA, que aparecia como se ainda devesse ser paga.
+ */
+export function situacaoDaFatura(status: string): {
+  texto: string;
+  tom: "money" | "danger" | "neutro" | "info" | "brass";
+} {
+  switch (status.toUpperCase()) {
+    case "RECEIVED":
+    case "CONFIRMED":
+    case "RECEIVED_IN_CASH":
+      return { texto: "Paga", tom: "money" };
+    case "PENDING":
+    case "AWAITING_RISK_ANALYSIS":
+      return { texto: "Em aberto", tom: "info" };
+    case "OVERDUE":
+      return { texto: "Vencida", tom: "danger" };
+    case "REFUNDED":
+      return { texto: "Estornada", tom: "neutro" };
+    case "REFUND_REQUESTED":
+    case "REFUND_IN_PROGRESS":
+      return { texto: "Estorno em andamento", tom: "brass" };
+    case "CHARGEBACK_REQUESTED":
+    case "CHARGEBACK_DISPUTE":
+    case "AWAITING_CHARGEBACK_REVERSAL":
+      return { texto: "Contestada no cartão", tom: "danger" };
+    case "DELETED":
+      return { texto: "Cancelada", tom: "neutro" };
+    default:
+      return { texto: status, tom: "neutro" };
+  }
+}

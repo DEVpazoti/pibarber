@@ -17,6 +17,87 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit: {
+        Row: {
+          action: string
+          actor_id: string | null
+          barbershop_id: string | null
+          created_at: string
+          details: Json
+          id: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          barbershop_id?: string | null
+          created_at?: string
+          details?: Json
+          id?: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          barbershop_id?: string | null
+          created_at?: string
+          details?: Json
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_audit_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_audit_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_notes: {
+        Row: {
+          author_id: string | null
+          barbershop_id: string
+          body: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          author_id?: string | null
+          barbershop_id: string
+          body: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          author_id?: string | null
+          barbershop_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_notes_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_notes_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       amenities: {
         Row: {
           created_at: string
@@ -757,6 +838,63 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feedbacks: {
+        Row: {
+          attachment_path: string | null
+          author_id: string | null
+          barbershop_id: string
+          context: Json
+          created_at: string
+          id: string
+          kind: string
+          message: string
+          page: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attachment_path?: string | null
+          author_id?: string | null
+          barbershop_id: string
+          context?: Json
+          created_at?: string
+          id?: string
+          kind: string
+          message: string
+          page?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attachment_path?: string | null
+          author_id?: string | null
+          barbershop_id?: string
+          context?: Json
+          created_at?: string
+          id?: string
+          kind?: string
+          message?: string
+          page?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedbacks_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedbacks_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
             referencedColumns: ["id"]
           },
         ]
@@ -1762,6 +1900,35 @@ export type Database = {
       }
     }
     Functions: {
+      admin_barbearias: {
+        Args: { p_shop?: string }
+        Returns: {
+          agendamentos_30d: number
+          avaliacoes: number
+          ciclo: string
+          city: string
+          clientes: number
+          created_at: string
+          dono_email: string
+          dono_nome: string
+          dono_telefone: string
+          id: string
+          name: string
+          nota: number
+          pago_ate: string
+          parcelado: boolean
+          plano_id: string
+          plano_nome: string
+          profissionais: number
+          setup_em: string
+          situacao: string
+          slug: string
+          state: string
+          sub_status: string
+          teste_ate: string
+        }[]
+      }
+      admin_metricas: { Args: never; Returns: Json }
       agendamento_por_token: {
         Args: { p_token: string }
         Returns: {
