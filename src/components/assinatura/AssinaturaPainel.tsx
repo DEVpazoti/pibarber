@@ -51,6 +51,7 @@ export function AssinaturaPainel({
   profissionaisAtivos,
   faturas,
   pagamentoDisponivel,
+  podeTrocar = false,
 }: {
   nomeBarbearia: string;
   liberada: boolean;
@@ -61,6 +62,11 @@ export function AssinaturaPainel({
   faturas: SubscriptionPayment[];
   /** Falso quando o ambiente não tem ASAAS_API_KEY: a tela abre, mas não cobra. */
   pagamentoDisponivel: boolean;
+  /**
+   * Há uma escolha agendada e ainda não paga (reativação ou renovação): os
+   * planos voltam a ter botão, e escolher de novo substitui a anterior.
+   */
+  podeTrocar?: boolean;
 }) {
   const [ciclo, setCiclo] = useState<SubscriptionCycle>(assinatura?.cycle ?? "annual");
   const [escolhido, setEscolhido] = useState<Plan | null>(null);
@@ -156,6 +162,12 @@ export function AssinaturaPainel({
                 Pagou há pouco? A confirmação do Pix é na hora; a do cartão pode levar alguns
                 minutos. Recarregue esta página.
               </p>
+              {!pagoEmDia || podeTrocar ? (
+                <p className="mt-1 text-xs text-ink-faint">
+                  Escolheu o plano ou a forma de pagamento errada? É só escolher de novo abaixo —
+                  esta fatura é cancelada.
+                </p>
+              ) : null}
             </div>
             <a
               href={emAberto.invoice_url ?? "#"}
@@ -281,11 +293,11 @@ export function AssinaturaPainel({
                 <div className="mt-4 flex-1" />
 
                 {cabe ? (
-                  ehAtual && !podeRenovar ? (
+                  ehAtual && !podeRenovar && !podeTrocar ? (
                     <Button tamanho="lg" larguraTotal variante="secondary" disabled>
                       Plano atual
                     </Button>
-                  ) : pagoEmDia && !podeRenovar ? (
+                  ) : pagoEmDia && !podeRenovar && !podeTrocar ? (
                     <p className="rounded-field bg-surface-2 px-3 py-2.5 text-center text-xs text-ink-soft">
                       {parcelado
                         ? "Na renovação você pode escolher outro plano."
@@ -299,7 +311,7 @@ export function AssinaturaPainel({
                         disabled={!pagamentoDisponivel}
                         onClick={() => setEscolhido(plano)}
                       >
-                        {podeRenovar ? "Renovar" : "Assinar"}
+                        {podeTrocar ? "Escolher este" : podeRenovar ? "Renovar" : "Assinar"}
                       </Button>
                       <p className="mt-2 text-center text-xs text-ink-faint">
                         {pagamentoDisponivel

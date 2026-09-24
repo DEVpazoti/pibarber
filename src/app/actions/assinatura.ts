@@ -9,12 +9,12 @@ import {
   criarAssinatura,
   criarCliente,
   criarCobrancaParcelada,
-  parcelasDoParcelamento,
   removerAssinatura,
   removerParcelamento,
   type AsaasCobranca,
 } from "@/lib/asaas";
 import { DIAS_PARA_RENOVAR, diasAte, rotuloDoCiclo, type FormaDePagamento } from "@/lib/assinatura";
+import { temPagamentoConfirmado } from "@/lib/assinatura-servidor";
 import { requireOwnerContext } from "@/lib/auth";
 import { erroDeCpfCnpj, soDigitosDoc } from "@/lib/documento";
 import { envAsaas } from "@/lib/env";
@@ -23,19 +23,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { falha, sucesso, type ActionResult, type SubscriptionCycle } from "@/lib/types";
 import { diaBR, hojeISO, paraDataISO } from "@/lib/utils";
-
-/** Algum pagamento do parcelamento já entrou? (então ele não pode ser apagado) */
-async function parcelamentoTemPagamento(id: string): Promise<boolean> {
-  try {
-    const parcelas = await parcelasDoParcelamento(id);
-    return parcelas.some((p) => ["CONFIRMED", "RECEIVED", "RECEIVED_IN_CASH"].includes(p.status));
-  } catch (error) {
-    // Na dúvida, NÃO apaga: sobra uma cobrança aberta no Asaas, mas nunca se
-    // desfaz um período que o dono pagou.
-    console.error("[assinatura] falha ao conferir o parcelamento anterior:", error);
-    return true;
-  }
-}
 
 /**
  * ASSINAR um plano: cria a assinatura no Asaas e devolve o link de pagamento.
@@ -151,7 +138,19 @@ export async function assinarPlano(entrada: {
 
     // Plano pago em vigor: trocar de plano é outro fluxo (diferença
     // proporcional, mudança na renovação) — ainda não existe.
-    if (pagoEmVigor && atual.status === "active" && !renovando) {
+    // Escolha feita com período pago sobrando e AINDA NÃO PAGA (reativação
+    // depois de cancelar, ou renovação do parcelado): o dono pode trocar a
+    // forma de pagamento ou o plano até pagar.
+    const escolhaNaoPaga =
+      pagoEmVigor &&
+      atual.status === "active" &&
+      Boolean(atual.asaas_subscription_id || atual.asaas_installment_id) &&
+      !(await temPagamentoConfirmado({
+        assinatura: atual.asaas_subscription_id,
+        parcelamento: atual.asaas_installment_id,
+      }));
+
+    if (pagoEmVigor && atual.status === "active" && !renovando && !escolhaNaoPaga) {
       return falha(
         modoParcelado
           ? `Seu plano está pago até ${diaBR(paraDataISO(atual.paid_until!))}. A renovação abre ${DIAS_PARA_RENOVAR} dias antes disso.`
@@ -176,7 +175,7 @@ export async function assinarPlano(entrada: {
     // O dono escolheu, não pagou, e voltou para escolher outro. Sem isto
     // ficariam duas cobranças abertas para a mesma loja. O que já foi PAGO
     // (a assinatura ativa, o parcelamento do período em vigor) não é tocado.
-    if (atual.asaas_subscription_id && atual.status !== "active") {
+    if (atual.asaas_subscription_id && (atual.status !== "active" || escolhaNaoPaga)) {
       await removerAssinatura(atual.asaas_subscription_id).catch((e) =>
         // 404 = já não existia. Outro erro também não impede o novo — mas fica
         // no log, porque pode sobrar cobrança lá.
@@ -185,7 +184,7 @@ export async function assinarPlano(entrada: {
     }
     if (
       atual.asaas_installment_id &&
-      !(await parcelamentoTemPagamento(atual.asaas_installment_id))
+      !(await temPagamentoConfirmado({ parcelamento: atual.asaas_installment_id }))
     ) {
       await removerParcelamento(atual.asaas_installment_id).catch((e) =>
         console.error("[assinatura] falha ao remover o parcelamento anterior:", e),
