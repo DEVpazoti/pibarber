@@ -1,12 +1,14 @@
 "use client";
 
-import { AlertCircle, Copy, ExternalLink, Plus, Store } from "lucide-react";
+import { AlertCircle, Copy, CreditCard, ExternalLink, Plus, Store } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 
 import { alternarBarbearia, criarBarbearia } from "@/app/actions/admin";
+import { AssinaturaAdminSheet, ChipAssinatura } from "@/components/admin/AssinaturaAdmin";
 import { Button, Chip, EmptyState, Field, Input, Modal, Rating, Select } from "@/components/ui";
+import type { Subscription } from "@/lib/types";
 import { ESTADOS } from "@/lib/viacep";
 import { dataBR, mascaraTelefone, paraSlug } from "@/lib/utils";
 
@@ -28,13 +30,28 @@ export type BarbeariaNoAdmin = {
   rating_avg: number;
   rating_count: number;
   is_active: boolean;
+  /** Desativada pela plataforma (blocked_at). O dono não desfaz. */
+  bloqueada: boolean;
+  /** O dono ainda não terminou o setup de /configurar. */
+  em_setup: boolean;
   created_at: string;
   dono: { full_name: string | null; email: string | null } | null;
+  assinatura: Pick<
+    Subscription,
+    | "status"
+    | "plan_id"
+    | "cycle"
+    | "trial_ends_at"
+    | "paid_until"
+    | "asaas_subscription_id"
+    | "asaas_installment_id"
+  > | null;
 };
 
 export function AdminPainel({ barbearias }: { barbearias: BarbeariaNoAdmin[] }) {
   const router = useRouter();
   const [aberto, setAberto] = useState(false);
+  const [assinaturaDe, setAssinaturaDe] = useState<string | null>(null);
 
   return (
     <>
@@ -64,7 +81,9 @@ export function AdminPainel({ barbearias }: { barbearias: BarbeariaNoAdmin[] }) 
               <div className="min-w-0 flex-1">
                 <p className="flex flex-wrap items-center gap-2">
                   <span className="truncate text-sm font-semibold text-ink">{b.name}</span>
-                  {b.is_active ? null : <Chip tom="neutro">Desativada</Chip>}
+                  {b.bloqueada ? <Chip tom="neutro">Desativada</Chip> : null}
+                  {b.em_setup ? <Chip tom="neutro">Em configuração</Chip> : null}
+                  <ChipAssinatura assinatura={b.assinatura} />
                 </p>
                 <p className="truncate text-xs text-ink-soft">
                   {b.dono?.full_name ?? "Sem dono"} · {b.dono?.email ?? "—"}
@@ -88,16 +107,27 @@ export function AdminPainel({ barbearias }: { barbearias: BarbeariaNoAdmin[] }) 
                   Ver
                 </Link>
 
-                <BotaoAlternar
-                  id={b.id}
-                  ativa={b.is_active}
-                  aoMudar={() => router.refresh()}
-                />
+                <Button
+                  variante="secondary"
+                  tamanho="sm"
+                  onClick={() => setAssinaturaDe(b.id)}
+                  iconeEsquerda={<CreditCard className="h-4 w-4" aria-hidden />}
+                >
+                  Assinatura
+                </Button>
+
+                <BotaoAlternar id={b.id} ativa={!b.bloqueada} aoMudar={() => router.refresh()} />
               </div>
             </li>
           ))}
         </ul>
       )}
+
+      <AssinaturaAdminSheet
+        shopId={assinaturaDe}
+        aoFechar={() => setAssinaturaDe(null)}
+        aoMudar={() => router.refresh()}
+      />
 
       <NovaBarbeariaDialog
         aberto={aberto}
@@ -169,9 +199,7 @@ function NovaBarbeariaDialog({
   const [telefone, setTelefone] = useState("");
 
   const [erro, setErro] = useState<string | null>(null);
-  const [criada, setCriada] = useState<{ email: string; senha: string; slug: string } | null>(
-    null,
-  );
+  const [criada, setCriada] = useState<{ email: string; senha: string; slug: string } | null>(null);
   const [copiado, setCopiado] = useState(false);
   const [enviando, iniciar] = useTransition();
 
@@ -286,16 +314,10 @@ function NovaBarbeariaDialog({
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-ink-faint">
-            O dono
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-ink-faint">O dono</p>
 
           <Field label="Nome do dono" htmlFor="adm-dono" obrigatorio>
-            <Input
-              id="adm-dono"
-              value={nomeDono}
-              onChange={(e) => setNomeDono(e.target.value)}
-            />
+            <Input id="adm-dono" value={nomeDono} onChange={(e) => setNomeDono(e.target.value)} />
           </Field>
 
           <Field label="E-mail" htmlFor="adm-email" obrigatorio>
@@ -341,11 +363,7 @@ function NovaBarbeariaDialog({
             htmlFor="adm-slug"
             dica={`Fica em /b/${slug || "sua-barbearia"}`}
           >
-            <Input
-              id="adm-slug"
-              value={slug}
-              onChange={(e) => setSlug(paraSlug(e.target.value))}
-            />
+            <Input id="adm-slug" value={slug} onChange={(e) => setSlug(paraSlug(e.target.value))} />
           </Field>
 
           <div className="grid grid-cols-[1fr_100px] gap-3">

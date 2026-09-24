@@ -24,6 +24,8 @@ export type NotificationType = Enums<"notification_type">;
 export type WhatsappEvent = Enums<"whatsapp_event">;
 export type WhatsappStatus = Enums<"whatsapp_status">;
 export type WhatsappTemplateStatus = Enums<"whatsapp_template_status">;
+export type SubscriptionStatus = Enums<"subscription_status">;
+export type SubscriptionCycle = Enums<"subscription_cycle">;
 
 /* ==========================================================================
    Tabelas
@@ -55,6 +57,10 @@ export type AppNotification = Tables<"notifications">;
 /** A fila de WhatsApp. Só a service role lê — ver 24_whatsapp.sql. */
 export type WhatsappMessage = Tables<"whatsapp_messages">;
 export type WhatsappTemplate = Tables<"whatsapp_templates">;
+export type Plan = Tables<"plans">;
+export type PlanPrice = Tables<"plan_prices">;
+export type Subscription = Tables<"subscriptions">;
+export type SubscriptionPayment = Tables<"subscription_payments">;
 
 /* ==========================================================================
    Retorno de Server Action
@@ -98,6 +104,24 @@ export type ShopContext = {
    * de reserva, porque isso é escolha de tela, não de autenticação.
    */
   shopName: string | null;
+  /**
+   * O dono já terminou o setup de /configurar (25_setup_barbearia.sql).
+   * Sempre verdadeiro para o assistente.
+   */
+  setupConcluido: boolean;
+  /**
+   * No teste ou com o período pago em dia (+1 dia de tolerância). Falso, o
+   * painel inteiro vira /assinatura. A regra é `assinatura_liberada()`, no banco.
+   */
+  assinaturaLiberada: boolean;
+  /** Os prazos da assinatura, para a faixa de aviso. Nulo para o assistente. */
+  assinatura: {
+    status: SubscriptionStatus;
+    trialEndsAt: string;
+    paidUntil: string | null;
+    /** Falso no parcelado: o dono precisa renovar no fim do período. */
+    renovaSozinho: boolean;
+  } | null;
   /** Só o dono e o admin. Comanda caixa, comissão e relatório. */
   podeVerDinheiro: boolean;
 };

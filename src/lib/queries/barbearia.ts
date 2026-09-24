@@ -80,6 +80,16 @@ export type AvaliacaoPublica = {
 
 export type BarbeariaPublica = {
   loja: Barbershop;
+  /**
+   * Mostra o botão de agendar: agendamento online ligado E assinatura em dia
+   * (26_assinaturas.sql). Loja vencida continua com o perfil no ar, mas com o
+   * telefone no lugar do botão.
+   *
+   * Vem do cache de dados, então pode atrasar até SEGUNDOS_DE_CACHE depois de
+   * a assinatura vencer. Não é furo: o trigger `appointments_exige_assinatura`
+   * recusa o agendamento no banco de qualquer jeito.
+   */
+  aceitaAgendamento: boolean;
   servicos: Service[];
   profissionais: Professional[];
   horarios: BusinessHour[];
@@ -119,18 +129,23 @@ function dadosPorId(shopId: string) {
     async (): Promise<BarbeariaPublica | null> => {
       const supabase = clientePublico();
 
-      const { data: loja, error } = await supabase
+      const { data: linha, error } = await supabase
         .from("barbershops")
-        .select("*")
+        .select("*, assinatura_em_dia")
         .eq("id", shopId)
         .eq("is_active", true)
-        .maybeSingle();
+        .maybeSingle()
+        // O parser de tipos do supabase-js não enxerga coluna calculada junto
+        // de `*`. O formato é este: a linha inteira + o booleano da função.
+        .overrideTypes<Barbershop & { assinatura_em_dia: boolean | null }, { merge: false }>();
 
       if (error) {
         console.error("[barbearia] falha ao carregar a loja:", error);
         return null;
       }
-      if (!loja) return null;
+      if (!linha) return null;
+
+      const { assinatura_em_dia, ...loja } = linha;
 
       const [servicos, profissionais, horarios, avaliacoes, beneficios] = await Promise.all([
         carregarServicos(loja.id),
@@ -140,7 +155,15 @@ function dadosPorId(shopId: string) {
         carregarBeneficios(loja.id),
       ]);
 
-      return { loja, servicos, profissionais, horarios, avaliacoes, beneficios };
+      return {
+        loja,
+        aceitaAgendamento: loja.accepts_online_booking && assinatura_em_dia !== false,
+        servicos,
+        profissionais,
+        horarios,
+        avaliacoes,
+        beneficios,
+      };
     },
     ["barbearia-dados", shopId],
     { revalidate: SEGUNDOS_DE_CACHE, tags: [tagBarbearia(shopId)] },
