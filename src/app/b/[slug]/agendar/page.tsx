@@ -27,11 +27,12 @@ export default async function AgendarPage({
 
   if (!dados) notFound();
 
-  const { loja, servicos, profissionais } = dados;
+  const { loja, aceitaAgendamento, servicos, profissionais } = dados;
 
-  // Agendamento online desligado: a página não existe. Quem chegar pela URL
-  // volta para o perfil, onde estão o telefone e o WhatsApp.
-  if (!loja.accepts_online_booking) notFound();
+  // Agendamento online desligado (pelo dono ou pela assinatura vencida): a
+  // página não existe. Quem chegar pela URL volta para o perfil, onde estão o
+  // telefone e o WhatsApp.
+  if (!aceitaAgendamento) notFound();
 
   const perfil = await getProfile();
   const dependentes = perfil ? await carregarDependentes(perfil.id) : [];

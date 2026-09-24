@@ -16,7 +16,11 @@ import type { Database } from "@/lib/database.types";
  */
 
 const PREFIXOS_APP = ["/app"];
-const PREFIXOS_PAINEL = ["/painel"];
+// /configurar é o setup guiado do dono. Mora fora de /painel (o layout de lá
+// redireciona para cá, e um redirect para dentro do próprio grupo entra em loop),
+// mas o papel exigido é o mesmo.
+// /assinatura idem: é para onde o painel manda quando o plano vence.
+const PREFIXOS_PAINEL = ["/painel", "/configurar", "/assinatura"];
 const PREFIXOS_ADMIN = ["/admin"];
 const ROTAS_AUTENTICACAO = ["/entrar", "/criar-conta"];
 

@@ -3,6 +3,7 @@ import {
   BarChart3,
   CalendarDays,
   ClipboardList,
+  CreditCard,
   Clock,
   HandCoins,
   LayoutDashboard,
@@ -54,6 +55,8 @@ const TODOS: ItemMenu[] = [
   { href: "/painel/fiado", rotulo: "Fiado", Icone: HandCoins, destaque: true },
   { href: "/painel/relatorios", rotulo: "Relatórios", Icone: BarChart3, soDono: true },
   { href: "/painel/configuracoes", rotulo: "Configurações", Icone: Settings, soDono: true },
+  // Fora de /painel de propósito (ver src/app/assinatura/page.tsx).
+  { href: "/assinatura", rotulo: "Assinatura", Icone: CreditCard, soDono: true },
 ];
 
 /**

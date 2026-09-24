@@ -114,13 +114,39 @@ export async function criarBarbearia(
   }
 }
 
-/** Liga e desliga a barbearia. Desativada, ela some da busca e do perfil público. */
+/**
+ * Bloqueia e desbloqueia a barbearia. Bloqueada, ela some da busca e do perfil
+ * público — e o dono não a reabre, nem terminando o setup (o trigger
+ * `barbershops_guard_bloqueio`, em 25_setup_barbearia.sql, segura).
+ *
+ * Desbloquear só a põe de volta no ar se o setup já terminou. Loja ainda em
+ * configuração continua escondida até o dono concluir — senão o desbloqueio
+ * publicaria uma loja sem horário nem serviço.
+ */
 export async function alternarBarbearia(id: string, ativa: boolean): Promise<ActionResult> {
   try {
     await requireAdmin();
     const admin = createAdminClient();
 
-    const { error } = await admin.from("barbershops").update({ is_active: ativa }).eq("id", id);
+    let setupConcluido = true;
+    if (ativa) {
+      const { data, error: erroLer } = await admin
+        .from("barbershops")
+        .select("setup_completed_at")
+        .eq("id", id)
+        .maybeSingle();
+      if (erroLer) return falha(traduzirErroBanco(erroLer, "[admin] ler barbearia"));
+      setupConcluido = Boolean(data?.setup_completed_at);
+    }
+
+    const { error } = await admin
+      .from("barbershops")
+      .update(
+        ativa
+          ? { blocked_at: null, is_active: setupConcluido }
+          : { blocked_at: new Date().toISOString(), is_active: false },
+      )
+      .eq("id", id);
 
     if (error) return falha(traduzirErroBanco(error, "[admin] alternar barbearia"));
 

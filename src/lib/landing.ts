@@ -11,7 +11,6 @@
  * evita o deslocamento de layout que estraga o CLS.
  */
 
-import { LINK_WHATSAPP_COMERCIAL } from "@/lib/config";
 
 /** Painel: 1440×900 em telas de 2× — o dono conhece o sistema no computador. */
 const PAINEL_LARGURA = 2880;
@@ -57,11 +56,10 @@ export const VISOES: VisaoDoProduto[] = [
       "É o que você abre de manhã e fecha à noite. Agenda, caixa, comissão e relatório " +
       "no mesmo lugar, sem planilha no meio.",
     formato: "desktop",
-    // Dono NÃO cria conta sozinho — a barbearia é cadastrada pela PiSystem
-    // (ver docs/promover-dono.md). Mandar este botão para /criar-conta criava
-    // uma conta de CLIENTE para quem queria uma barbearia, e o sujeito ficava
-    // preso numa área que não é a dele.
-    cta: { texto: "Quero na minha barbearia", href: LINK_WHATSAPP_COMERCIAL, externo: true },
+    // Vai para o cadastro de BARBEARIA, não para /criar-conta puro: sem o
+    // `?tipo=`, o dono cairia no formulário de cliente e criaria uma conta que
+    // não é a dele.
+    cta: { texto: "Quero na minha barbearia", href: "/criar-conta?tipo=barbearia" },
     telas: [
       {
         arquivo: "painel-hoje",

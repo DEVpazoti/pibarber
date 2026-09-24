@@ -1,10 +1,22 @@
 # Como promover um cliente a dono de barbearia
 
-Todo cadastro feito pelo site nasce **cliente**. Não existe, e não deve existir,
-um caminho na interface para alguém criar a própria barbearia — a aquisição é
-por conversa no WhatsApp, e a conta é criada por você.
+Desde o 25_setup_barbearia.sql o barbeiro **pode se cadastrar sozinho**: em
+`/criar-conta?tipo=barbearia` ele cria a conta e a barbearia de uma vez
+(`criarContaBarbearia` em `src/app/actions/auth.ts`). A loja nasce escondida
+(`is_active = false`) e só aparece ao público quando ele termina o setup guiado
+de `/configurar`. E-mail e telefone não se repetem entre donos.
 
-Este documento é o passo a passo do que fazer quando alguém fecha.
+Quem **já é cliente** não precisa de você: em Perfil → **Abrir minha barbearia**
+(`/app/perfil/barbearia`) a própria conta vira dono, sem perder o histórico. O
+cadastro de barbearia aponta para lá quando o e-mail já existe.
+
+Desativar uma barbearia no `/admin` grava `blocked_at`, e isso o dono não desfaz
+— nem terminando o setup (trigger `barbershops_guard_bloqueio`).
+
+O `/admin` continua valendo para quando **você** cria a conta por alguém — a loja
+criada ali também passa pelo setup no primeiro login do dono.
+
+Este documento é o passo a passo desse caminho manual.
 
 ---
 
