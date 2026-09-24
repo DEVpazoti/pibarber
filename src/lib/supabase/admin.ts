@@ -18,6 +18,18 @@ import { envPublico, envServiceRole } from "@/lib/env";
  *      as tabelas da fila não têm policy para ninguém, e cron e webhook não
  *      têm sessão. A tela do dono lê o histórico por aqui DEPOIS de
  *      requireOwnerContext(), filtrando pela loja dele.
+ *   5. a barbearia criada pelo próprio barbeiro (src/lib/nova-barbearia.ts):
+ *      confere se o telefone já é de outro dono e insere a loja, que a RLS só
+ *      aceita do admin. Dois caminhos: o cadastro novo (`criarContaBarbearia`,
+ *      antes de existir sessão, para o usuário que o `signUp` acabou de criar)
+ *      e o cliente logado que abre a dele (`abrirMinhaBarbearia`).
+ *   6. o cadastro do cliente (`criarConta`): grava o telefone no perfil que o
+ *      `signUp` acabou de criar — o trigger não o copia, e sem sessão (e-mail
+ *      por confirmar) o próprio usuário ainda não pode gravar.
+ *   7. a assinatura (src/app/actions/assinatura.ts e /api/webhooks/asaas):
+ *      `subscriptions` não tem escrita para ninguém com sessão — senão o dono
+ *      se daria um período pago pela REST. A action grava depois de
+ *      requireOwnerContext(); o webhook, depois de conferir o token do Asaas.
  *
  * REGRA: confirme o papel de quem chamou ANTES de instanciar isto.
  *

@@ -5,7 +5,10 @@ import { redirect, unstable_rethrow } from "next/navigation";
 
 import { ROTA_EMAIL_CONFIRMADO } from "@/lib/auth";
 import { urlDoSite } from "@/lib/env";
+import { criarBarbeariaDoDono, telefoneDeOutroDono } from "@/lib/nova-barbearia";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { erroDeTelefone, normalizarTelefone } from "@/lib/telefone";
 import { falha, sucesso, type ActionResult } from "@/lib/types";
 
 /**
@@ -142,20 +145,22 @@ export async function entrar(entrada: {
    ========================================================================== */
 
 /**
- * O cadastro público SEMPRE cria um `client`.
+ * O cadastro de CLIENTE. Sempre cria um `client`.
  *
  * O papel não é enviado e não seria aceito: o trigger handle_new_user() força
  * role='client' ignorando qualquer coisa vinda do metadata. Dono nasce em
- * /admin; assistente nasce em /painel/equipe.
+ * `criarContaBarbearia` (ou no /admin); assistente nasce em /painel/equipe.
  */
 export async function criarConta(entrada: {
   nome: string;
   email: string;
+  telefone: string;
   senha: string;
   confirmacao: string;
 }): Promise<ActionResult> {
   const nome = entrada.nome.trim();
   const email = entrada.email.trim().toLowerCase();
+  const telefone = normalizarTelefone(entrada.telefone);
   const senha = entrada.senha;
   const confirmacao = entrada.confirmacao;
 
@@ -165,6 +170,10 @@ export async function criarConta(entrada: {
   if (nome.length < 3) return falha("Escreva seu nome completo.", "nome");
   if (!email) return falha("Informe o e-mail.", "email");
   if (!emailValido(email)) return falha("Esse e-mail não parece válido.", "email");
+  // Cliente pode repetir telefone (mãe e filho com o mesmo celular é o caso
+  // normal) — ao contrário do dono. Aqui só precisa ser um celular de verdade.
+  const erroTelefone = erroDeTelefone(telefone);
+  if (erroTelefone) return falha(erroTelefone, "telefone");
   if (!senha) return falha("Crie uma senha.", "senha");
   if (senha.length < 6) return falha("A senha precisa ter pelo menos 6 caracteres.", "senha");
   if (senha !== confirmacao) return falha("As senhas não são iguais.", "confirmacao");
@@ -200,6 +209,22 @@ export async function criarConta(entrada: {
       return falha("Já existe uma conta com este e-mail. Tente entrar.", "email");
     }
 
+    // O telefone vai direto para o perfil, pela service role: o trigger
+    // handle_new_user() só copia nome, e-mail e foto do metadata, e sem sessão
+    // (confirmação de e-mail ligada) o próprio usuário ainda não pode gravar.
+    // Só depois da checagem acima — aqui `data.user` é a conta que ACABOU de
+    // nascer, nunca uma que já existia.
+    if (data.user) {
+      const { error: erroTelefone } = await createAdminClient()
+        .from("profiles")
+        .update({ phone: telefone })
+        .eq("id", data.user.id);
+
+      // Não desfaz a conta por isso: ela existe e funciona, e o app já pede o
+      // telefone de quem está sem ele (AvisoTelefone e o agendamento).
+      if (erroTelefone) console.error("[auth] falha ao gravar o telefone do cliente:", erroTelefone);
+    }
+
     // Sem sessão = o projeto exige confirmação por e-mail.
     if (!data.session) {
       return sucesso(
@@ -216,6 +241,130 @@ export async function criarConta(entrada: {
     return falha("Não consegui criar a conta. Tente de novo em instantes.");
   }
 }
+
+/* ==========================================================================
+   Criar conta de barbearia — o dono se cadastra sozinho
+   ========================================================================== */
+
+/**
+ * Cria a conta do dono JUNTO com a barbearia dele.
+ *
+ * Mesma ordem do /admin (`criarBarbearia`): a conta nasce `client`, a loja é
+ * inserida com `owner_id` apontando para ela e o trigger
+ * `barbershop_after_insert()` promove o perfil a `owner`. Não existe momento
+ * em que a pessoa seja "dono sem barbearia" — se a loja não entra, a conta
+ * recém-criada é apagada.
+ *
+ * A loja nasce com `is_active = false`: fora da busca e da página pública até
+ * o setup de /configurar terminar. Sem isso ela apareceria para os clientes
+ * sem horário, sem serviço e sem ninguém para atender.
+ *
+ * A REGRA DE UNICIDADE: dois barbeiros não dividem e-mail nem telefone.
+ *   e-mail   → único em auth.users; o Supabase recusa (ou disfarça, ver abaixo).
+ *   telefone → src/lib/nova-barbearia.ts, o mesmo caminho do cliente que abre
+ *              a barbearia pelo Perfil.
+ *
+ * Usa a service role, e antes de haver sessão — é um dos usos legítimos
+ * listados em src/lib/supabase/admin.ts. Ela só LÊ telefones para a checagem
+ * e só ESCREVE no usuário que o próprio `signUp` acabou de criar.
+ */
+export async function criarContaBarbearia(entrada: {
+  nome: string;
+  nomeBarbearia: string;
+  email: string;
+  telefone: string;
+  senha: string;
+  confirmacao: string;
+}): Promise<ActionResult> {
+  const nome = entrada.nome.trim();
+  const nomeBarbearia = entrada.nomeBarbearia.trim();
+  const email = entrada.email.trim().toLowerCase();
+  const telefone = normalizarTelefone(entrada.telefone);
+  const senha = entrada.senha;
+
+  if (nome.length < 3) return falha("Escreva seu nome completo.", "nome");
+  if (nomeBarbearia.length < 2) return falha("Escreva o nome da barbearia.", "nomeBarbearia");
+  if (!email) return falha("Informe o e-mail.", "email");
+  if (!emailValido(email)) return falha("Esse e-mail não parece válido.", "email");
+  const erroTelefone = erroDeTelefone(telefone);
+  if (erroTelefone) return falha(erroTelefone, "telefone");
+  if (!senha) return falha("Crie uma senha.", "senha");
+  if (senha.length < 6) return falha("A senha precisa ter pelo menos 6 caracteres.", "senha");
+  if (senha !== entrada.confirmacao) return falha("As senhas não são iguais.", "confirmacao");
+
+  try {
+    const admin = createAdminClient();
+
+    const telefoneEmUso = await telefoneDeOutroDono(admin, telefone);
+    if (telefoneEmUso === null) {
+      return falha("Não consegui criar a conta. Tente de novo em instantes.");
+    }
+    if (telefoneEmUso) {
+      return falha("Este telefone já está cadastrado em outra barbearia.", "telefone");
+    }
+
+    const supabase = await createClient();
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password: senha,
+      options: {
+        data: { full_name: nome },
+        emailRedirectTo: `${urlDoSite()}/callback?proximo=${encodeURIComponent(ROTA_EMAIL_CONFIRMADO)}`,
+      },
+    });
+
+    if (error) {
+      const { texto, campo } = traduzirErroAuth(error.message);
+      if (campo === "email" && texto.startsWith("Já existe")) {
+        return falha(MENSAGEM_EMAIL_DE_CLIENTE, "email");
+      }
+      return falha(texto, campo);
+    }
+
+    // Mesmo disfarce do `criarConta`: e-mail já cadastrado volta como usuário
+    // de mentira, sem identidades. O caso típico aqui é o CLIENTE do app que
+    // quer abrir a barbearia dele — e para ele existe caminho próprio, sem
+    // perder a conta: `abrirMinhaBarbearia`, pelo Perfil.
+    if (!data.user || (data.user.identities?.length ?? 0) === 0) {
+      return falha(MENSAGEM_EMAIL_DE_CLIENTE, "email");
+    }
+
+    const userId = data.user.id;
+
+    const criada = await criarBarbeariaDoDono(admin, { userId, nomeBarbearia, telefone });
+
+    if (!criada.ok) {
+      // Sem a loja, a conta ficaria órfã: um cadastro de barbeiro que entra
+      // como cliente e não entende por quê. Desfaz.
+      await admin.auth.admin.deleteUser(userId);
+      return criada.motivo === "telefone_em_uso"
+        ? falha("Este telefone já está cadastrado em outra barbearia.", "telefone")
+        : falha("Não consegui criar a barbearia. Tente de novo em instantes.");
+    }
+
+    if (!data.session) {
+      return sucesso(
+        undefined,
+        "Barbearia criada! Confirme o e-mail que enviamos e entre para terminar a configuração.",
+      );
+    }
+
+    revalidatePath("/", "layout");
+    redirect("/configurar");
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error("[auth] erro inesperado em criarContaBarbearia:", error);
+    return falha("Não consegui criar a conta. Tente de novo em instantes.");
+  }
+}
+
+/**
+ * Não diz "é conta de cliente" — o Supabase não revela de quem é o e-mail, e
+ * esta tela também não deveria. Diz o que fazer nos dois casos possíveis.
+ */
+const MENSAGEM_EMAIL_DE_CLIENTE =
+  "Já existe uma conta com este e-mail. Se ela é sua, entre e toque em “Abrir minha barbearia” no Perfil.";
 
 /* ==========================================================================
    Google

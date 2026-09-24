@@ -232,6 +232,7 @@ export type Database = {
         Row: {
           accepts_online_booking: boolean
           allow_public_booking: boolean
+          blocked_at: string | null
           cancel_deadline_hours: number
           city: string | null
           complement: string | null
@@ -252,6 +253,7 @@ export type Database = {
           phone: string | null
           rating_avg: number
           rating_count: number
+          setup_completed_at: string | null
           slug: string
           state: string | null
           street: string | null
@@ -264,6 +266,7 @@ export type Database = {
         Insert: {
           accepts_online_booking?: boolean
           allow_public_booking?: boolean
+          blocked_at?: string | null
           cancel_deadline_hours?: number
           city?: string | null
           complement?: string | null
@@ -284,6 +287,7 @@ export type Database = {
           phone?: string | null
           rating_avg?: number
           rating_count?: number
+          setup_completed_at?: string | null
           slug: string
           state?: string | null
           street?: string | null
@@ -296,6 +300,7 @@ export type Database = {
         Update: {
           accepts_online_booking?: boolean
           allow_public_booking?: boolean
+          blocked_at?: string | null
           cancel_deadline_hours?: number
           city?: string | null
           complement?: string | null
@@ -316,6 +321,7 @@ export type Database = {
           phone?: string | null
           rating_avg?: number
           rating_count?: number
+          setup_completed_at?: string | null
           slug?: string
           state?: string | null
           street?: string | null
@@ -796,6 +802,36 @@ export type Database = {
           },
         ]
       }
+      plans: {
+        Row: {
+          id: string
+          is_active: boolean
+          max_professionals: number
+          min_professionals: number
+          monthly_price: number
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          id: string
+          is_active?: boolean
+          max_professionals: number
+          min_professionals: number
+          monthly_price: number
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          is_active?: boolean
+          max_professionals?: number
+          min_professionals?: number
+          monthly_price?: number
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       professional_schedules: {
         Row: {
           ends_at: string | null
@@ -1120,6 +1156,211 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_events: {
+        Row: {
+          action: string
+          actor_id: string | null
+          barbershop_id: string
+          created_at: string
+          details: Json
+          id: string
+          reason: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          barbershop_id: string
+          created_at?: string
+          details?: Json
+          id?: string
+          reason?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          barbershop_id?: string
+          created_at?: string
+          details?: Json
+          id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_events_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_payments: {
+        Row: {
+          asaas_payment_id: string
+          barbershop_id: string
+          billing_type: string | null
+          created_at: string
+          cycle: Database["public"]["Enums"]["subscription_cycle"] | null
+          due_date: string | null
+          id: string
+          installment_number: number | null
+          invoice_url: string | null
+          paid_at: string | null
+          plan_id: string | null
+          status: string
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          asaas_payment_id: string
+          barbershop_id: string
+          billing_type?: string | null
+          created_at?: string
+          cycle?: Database["public"]["Enums"]["subscription_cycle"] | null
+          due_date?: string | null
+          id?: string
+          installment_number?: number | null
+          invoice_url?: string | null
+          paid_at?: string | null
+          plan_id?: string | null
+          status: string
+          updated_at?: string
+          value: number
+        }
+        Update: {
+          asaas_payment_id?: string
+          barbershop_id?: string
+          billing_type?: string | null
+          created_at?: string
+          cycle?: Database["public"]["Enums"]["subscription_cycle"] | null
+          due_date?: string | null
+          id?: string
+          installment_number?: number | null
+          invoice_url?: string | null
+          paid_at?: string | null
+          plan_id?: string | null
+          status?: string
+          updated_at?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_payments_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_payments_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plan_prices"
+            referencedColumns: ["plan_id"]
+          },
+          {
+            foreignKeyName: "subscription_payments_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          asaas_customer_id: string | null
+          asaas_installment_id: string | null
+          asaas_subscription_id: string | null
+          barbershop_id: string
+          created_at: string
+          cycle: Database["public"]["Enums"]["subscription_cycle"] | null
+          installment_first_due: string | null
+          next_cycle: Database["public"]["Enums"]["subscription_cycle"] | null
+          next_plan_id: string | null
+          paid_until: string | null
+          plan_id: string | null
+          status: Database["public"]["Enums"]["subscription_status"]
+          trial_ends_at: string
+          updated_at: string
+        }
+        Insert: {
+          asaas_customer_id?: string | null
+          asaas_installment_id?: string | null
+          asaas_subscription_id?: string | null
+          barbershop_id: string
+          created_at?: string
+          cycle?: Database["public"]["Enums"]["subscription_cycle"] | null
+          installment_first_due?: string | null
+          next_cycle?: Database["public"]["Enums"]["subscription_cycle"] | null
+          next_plan_id?: string | null
+          paid_until?: string | null
+          plan_id?: string | null
+          status?: Database["public"]["Enums"]["subscription_status"]
+          trial_ends_at: string
+          updated_at?: string
+        }
+        Update: {
+          asaas_customer_id?: string | null
+          asaas_installment_id?: string | null
+          asaas_subscription_id?: string | null
+          barbershop_id?: string
+          created_at?: string
+          cycle?: Database["public"]["Enums"]["subscription_cycle"] | null
+          installment_first_due?: string | null
+          next_cycle?: Database["public"]["Enums"]["subscription_cycle"] | null
+          next_plan_id?: string | null
+          paid_until?: string | null
+          plan_id?: string | null
+          status?: Database["public"]["Enums"]["subscription_status"]
+          trial_ends_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: true
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_next_plan_id_fkey"
+            columns: ["next_plan_id"]
+            isOneToOne: false
+            referencedRelation: "plan_prices"
+            referencedColumns: ["plan_id"]
+          },
+          {
+            foreignKeyName: "subscriptions_next_plan_id_fkey"
+            columns: ["next_plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plan_prices"
+            referencedColumns: ["plan_id"]
+          },
+          {
+            foreignKeyName: "subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
             referencedColumns: ["id"]
           },
         ]
@@ -1508,7 +1749,17 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      plan_prices: {
+        Row: {
+          cycle: Database["public"]["Enums"]["subscription_cycle"] | null
+          discount_percent: number | null
+          months: number | null
+          per_month: number | null
+          plan_id: string | null
+          total: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       agendamento_por_token: {
@@ -1529,6 +1780,20 @@ export type Database = {
           status: Database["public"]["Enums"]["appointment_status"]
           total_price: number
         }[]
+      }
+      assinatura_em_dia: {
+        Args: { b: Database["public"]["Tables"]["barbershops"]["Row"] }
+        Returns: boolean
+      }
+      assinatura_estornada: { Args: { p_shop: string }; Returns: undefined }
+      assinatura_liberada: { Args: { shop: string }; Returns: boolean }
+      assinatura_pagamento_confirmado: {
+        Args: { p_asaas_subscription: string; p_due_date: string }
+        Returns: string
+      }
+      assinatura_periodo_pago: {
+        Args: { p_inicio: string; p_shop: string }
+        Returns: undefined
       }
       book_appointment: {
         Args: {
@@ -1589,6 +1854,7 @@ export type Database = {
         Returns: string
       }
       complete_appointments_lote: { Args: { p_itens: Json }; Returns: number }
+      concluir_setup_barbearia: { Args: { shop: string }; Returns: boolean }
       dashboard_summary: {
         Args: { p_ate?: string; p_de?: string; p_shop: string }
         Returns: Json
@@ -1616,6 +1882,7 @@ export type Database = {
         }
         Returns: string
       }
+      limite_de_profissionais: { Args: { shop: string }; Returns: number }
       mark_no_show: { Args: { p_appointment: string }; Returns: string }
       my_shop_id: { Args: never; Returns: string }
       next_walk_in_number: { Args: { p_shop: string }; Returns: number }
@@ -1771,6 +2038,13 @@ export type Database = {
         | "review"
         | "system"
       payment_method: "cash" | "pix" | "debit" | "credit" | "fiado"
+      subscription_cycle: "monthly" | "semiannual" | "annual"
+      subscription_status:
+        | "trialing"
+        | "pending"
+        | "active"
+        | "past_due"
+        | "canceled"
       transaction_type: "income" | "expense"
       user_role: "owner" | "assistant" | "client"
       waitlist_status: "waiting" | "notified" | "converted" | "expired"
@@ -1927,6 +2201,14 @@ export const Constants = {
         "system",
       ],
       payment_method: ["cash", "pix", "debit", "credit", "fiado"],
+      subscription_cycle: ["monthly", "semiannual", "annual"],
+      subscription_status: [
+        "trialing",
+        "pending",
+        "active",
+        "past_due",
+        "canceled",
+      ],
       transaction_type: ["income", "expense"],
       user_role: ["owner", "assistant", "client"],
       waitlist_status: ["waiting", "notified", "converted", "expired"],

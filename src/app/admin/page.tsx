@@ -63,8 +63,9 @@ async function carregar(): Promise<BarbeariaNoAdmin[]> {
     const { data, error } = await supabase
       .from("barbershops")
       .select(
-        `id, name, slug, city, state, rating_avg, rating_count, is_active, created_at,
-         dono:profiles!barbershops_owner_id_fkey(full_name, email)`,
+        `id, name, slug, city, state, rating_avg, rating_count, is_active, blocked_at, setup_completed_at, created_at,
+         dono:profiles!barbershops_owner_id_fkey(full_name, email),
+         assinatura:subscriptions(status, plan_id, cycle, trial_ends_at, paid_until, asaas_subscription_id, asaas_installment_id)`,
       )
       .order("created_at", { ascending: false })
       .limit(200);
@@ -83,8 +84,11 @@ async function carregar(): Promise<BarbeariaNoAdmin[]> {
       rating_avg: Number(b.rating_avg),
       rating_count: b.rating_count,
       is_active: b.is_active,
+      bloqueada: b.blocked_at != null,
+      em_setup: b.setup_completed_at == null,
       created_at: b.created_at,
       dono: one(b.dono),
+      assinatura: one(b.assinatura),
     }));
   } catch (error) {
     unstable_rethrow(error);

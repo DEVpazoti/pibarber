@@ -6,6 +6,7 @@ import {
   KeyRound,
   Lock,
   MapPin,
+  Store,
   User,
   Users,
 } from "lucide-react";
@@ -27,6 +28,7 @@ const ITENS = [
   { href: "/app/perfil/seguranca", Icone: Lock, titulo: "Segurança", subtitulo: "Altere sua senha" },
   { href: "/app/perfil/historico", Icone: History, titulo: "Histórico", subtitulo: "Seu histórico de agendamentos" },
   { href: "/app/perfil/espera", Icone: Clock, titulo: "Lista de espera", subtitulo: "Acompanhe sua lista de espera" },
+  { href: "/app/perfil/barbearia", Icone: Store, titulo: "Abrir minha barbearia", subtitulo: "Tem uma barbearia? Coloque ela no PiBarber" },
   { href: "/app/perfil/ajuda", Icone: HelpCircle, titulo: "Central de ajuda", subtitulo: "Perguntas frequentes e suporte" },
 ] as const;
 
