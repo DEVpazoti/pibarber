@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 import type { Database } from "@/lib/database.types";
+import { COOKIE_VISUALIZACAO, lojaDoCookie } from "@/lib/visualizacao";
 
 /**
  * Middleware — a SEGUNDA das três camadas de permissão.
@@ -100,11 +101,7 @@ export async function middleware(request: NextRequest) {
   const papel = perfil?.role ?? "client";
   const ehAdmin = perfil?.is_platform_admin ?? false;
 
-  const casa = ehAdmin
-    ? "/admin"
-    : papel === "owner" || papel === "assistant"
-      ? "/painel"
-      : "/app";
+  const casa = ehAdmin ? "/admin" : papel === "owner" || papel === "assistant" ? "/painel" : "/app";
 
   // Quem já está logado não fica olhando tela de login.
   if (ROTAS_AUTENTICACAO.includes(caminho)) {
@@ -118,9 +115,18 @@ export async function middleware(request: NextRequest) {
   const podeApp = papel === "client";
   const podePainel = papel === "owner" || papel === "assistant";
 
+  // "Ver como o dono": o admin entra no /painel (e só nele — não no setup nem
+  // na assinatura, que são do dono) quando o cookie de visualização existe.
+  // Quem confere de verdade é `requireShopContext()`, que só aceita o cookie
+  // de admin e recusa toda ação nesse modo.
+  const visualizando =
+    ehAdmin &&
+    comecaCom(caminho, ["/painel"]) &&
+    lojaDoCookie(request.cookies.get(COOKIE_VISUALIZACAO)?.value) !== null;
+
   const negado =
     (comecaCom(caminho, PREFIXOS_APP) && !podeApp) ||
-    (comecaCom(caminho, PREFIXOS_PAINEL) && !podePainel) ||
+    (comecaCom(caminho, PREFIXOS_PAINEL) && !podePainel && !visualizando) ||
     (comecaCom(caminho, PREFIXOS_ADMIN) && !ehAdmin);
 
   if (negado) {

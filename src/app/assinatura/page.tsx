@@ -80,6 +80,10 @@ export default async function AssinaturaPage() {
       .from("subscription_payments")
       .select("*")
       .eq("barbershop_id", shopId)
+      // Fatura cancelada antes de ser paga (o dono trocou de plano ou de forma
+      // de pagamento, ou cancelou) nunca foi cobrada: na lista do dono só
+      // confunde. O /admin continua vendo, como "Cancelada".
+      .neq("status", "DELETED")
       .order("created_at", { ascending: false })
       .limit(24),
   ]);

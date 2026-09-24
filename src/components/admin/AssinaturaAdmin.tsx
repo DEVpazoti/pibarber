@@ -11,7 +11,7 @@ import {
   type AssinaturaNoAdmin,
 } from "@/app/actions/admin-assinatura";
 import { Button, Chip, Field, Input, Select, Sheet } from "@/components/ui";
-import { rotuloDoCiclo } from "@/lib/assinatura";
+import { rotuloDoCiclo, situacaoDaFatura } from "@/lib/assinatura";
 import type { Subscription, SubscriptionPayment } from "@/lib/types";
 import { brl, dataBR, dataHoraBR, diaBR } from "@/lib/utils";
 
@@ -239,8 +239,8 @@ function FaturaAdmin({
                 : fatura.billing_type}
           {fatura.installment_number ? ` · parcela ${fatura.installment_number}` : ""}
         </span>
-        <Chip tom={paga ? "money" : fatura.status === "REFUNDED" ? "neutro" : "info"}>
-          {paga ? "Paga" : fatura.status === "REFUNDED" ? "Estornada" : fatura.status}
+        <Chip tom={situacaoDaFatura(fatura.status).tom}>
+          {situacaoDaFatura(fatura.status).texto}
         </Chip>
       </div>
 
