@@ -121,3 +121,45 @@ export function envWhatsapp(): EnvWhatsapp | null {
 export function envCronSecret(): string | null {
   return process.env.CRON_SECRET?.trim() || null;
 }
+
+/* ==========================================================================
+   Asaas — cobrança das assinaturas (26_assinaturas.sql)
+   ========================================================================== */
+
+export type EnvAsaas = {
+  /** SEGREDO. `$aact_hmlg_…` no Sandbox, `$aact_prod_…` em produção. */
+  apiKey: string;
+  /** SEGREDO. O Asaas o manda no header `asaas-access-token` de cada webhook. */
+  webhookToken: string;
+  baseUrl: string;
+  sandbox: boolean;
+};
+
+/**
+ * As credenciais do Asaas, ou `null` quando a cobrança não está ligada.
+ *
+ * Como o WhatsApp: sem `ASAAS_API_KEY` o projeto sobe normalmente — a tela de
+ * assinatura só não deixa pagar. Com ela, o token do webhook vira obrigatório.
+ *
+ * ⚠️ A CHAVE COMEÇA COM `$`. No .env o Next expande `$nome` como variável e
+ * a chave chega VAZIA, sem erro nenhum. Escreva `ASAAS_API_KEY=\$aact_…`.
+ *
+ * O ambiente sai do prefixo da própria chave: uma chave de produção nunca
+ * conversa com o Sandbox por engano, nem o contrário.
+ */
+export function envAsaas(): EnvAsaas | null {
+  const apiKey = process.env.ASAAS_API_KEY?.trim();
+  if (!apiKey) return null;
+
+  const sandbox = !apiKey.startsWith("$aact_prod_");
+  return {
+    apiKey,
+    webhookToken: obrigatoria(
+      "ASAAS_WEBHOOK_TOKEN",
+      process.env.ASAAS_WEBHOOK_TOKEN,
+      "com a senha que você cadastrou no webhook do Asaas",
+    ).trim(),
+    baseUrl: sandbox ? "https://api-sandbox.asaas.com/v3" : "https://api.asaas.com/v3",
+    sandbox,
+  };
+}

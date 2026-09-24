@@ -12,9 +12,10 @@ export const MARCA = {
    O WhatsApp comercial — por onde TODO dono de barbearia entra
    ==========================================================================
 
-   Dono de barbearia não se cadastra sozinho (ver docs/promover-dono.md): a
-   aquisição é por conversa. Então todo CTA de "quero na minha barbearia" abre
-   o WhatsApp, e não o cadastro.
+   Desde o setup guiado o dono de barbearia SE CADASTRA sozinho
+   (/criar-conta?tipo=barbearia), e é para lá que vão os CTAs principais da
+   landing. O WhatsApp fica para quem quer conversar antes e para barbearias
+   com mais de 8 profissionais, que não têm plano pronto.
 
    Número e mensagem vêm de variável de ambiente para você trocar sem mexer no
    código — e sem redeploy de código, só de configuração na Vercel. Os valores
@@ -49,8 +50,11 @@ export const LINK_WHATSAPP_COMERCIAL = linkWhatsApp(WHATSAPP_COMERCIAL, WHATSAPP
 
 export const EMAIL_COMERCIAL = "contato@pisystem.com.br";
 
-/** Preço da mensalidade mostrado na landing. */
+/**
+ * O teste grátis. Os PREÇOS não moram aqui: vêm da tabela `plans`
+ * (26_assinaturas.sql), a mesma que cobra — ver src/lib/queries/planos.ts.
+ * Mudou o teste, muda também o `interval '14 days'` de 26_assinaturas.sql.
+ */
 export const PRECO = {
-  mensal: 79.9,
   diasGratis: 14,
 } as const;

@@ -77,7 +77,8 @@ export default async function PerfilBarbeariaPage({
 
   if (!dados) notFound();
 
-  const { loja, servicos, profissionais, horarios, avaliacoes, beneficios } = dados;
+  const { loja, aceitaAgendamento, servicos, profissionais, horarios, avaliacoes, beneficios } =
+    dados;
 
   // Registra o acesso para alimentar "Últimos acessos" na home do app.
   // Só faz efeito para cliente logado; visitante passa direto.
@@ -254,7 +255,7 @@ export default async function PerfilBarbeariaPage({
       {/* --- Chamada fixa na base -------------------------------------- */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 px-4 pb-safe pt-3 backdrop-blur">
         <div className="mx-auto flex max-w-[560px] gap-2 pb-3">
-          {loja.accepts_online_booking ? (
+          {aceitaAgendamento ? (
             <Link
               href={`/b/${loja.slug}/agendar`}
               className="inline-flex h-[50px] w-full items-center justify-center rounded-field bg-brass text-base font-medium text-brass-ink transition-opacity active:scale-[0.98]"
@@ -263,8 +264,9 @@ export default async function PerfilBarbeariaPage({
             </Link>
           ) : (
             <>
-              {/* Sem agendamento online, o caminho é o telefone — e a tela
-                  precisa dizer isso, não sumir com o botão. */}
+              {/* Sem agendamento online (desligado pelo dono, ou assinatura
+                  vencida), o caminho é o telefone — e a tela precisa dizer
+                  isso, não sumir com o botão. */}
               {loja.phone ? (
                 <a
                   href={`tel:${loja.phone}`}

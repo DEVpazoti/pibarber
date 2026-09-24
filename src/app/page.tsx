@@ -10,6 +10,7 @@ import {
   PhoneOff,
   Scissors,
   Smartphone,
+  Store,
   TrendingUp,
   UserCog,
   UserRound,
@@ -17,18 +18,16 @@ import {
   Wallet,
 } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { VejaPorDentro } from "@/components/landing/VejaPorDentro";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LinkButton } from "@/components/ui";
-import {
-  EMAIL_COMERCIAL,
-  LINK_WHATSAPP_COMERCIAL,
-  MARCA,
-  PRECO,
-} from "@/lib/config";
+import { EMAIL_COMERCIAL, LINK_WHATSAPP_COMERCIAL, MARCA, PRECO } from "@/lib/config";
+import { faixaDoPlano } from "@/lib/assinatura";
 import { absoluta } from "@/lib/env";
+import { carregarPlanosPublicos, type PlanoPublico } from "@/lib/queries/planos";
 import { brl } from "@/lib/utils";
 
 /**
@@ -189,51 +188,68 @@ const INCLUI = [
  * Dados estruturados — é como o Google entende que esta página descreve um
  * *produto de software*, e não um artigo qualquer sobre barbearia.
  *
- * `offers` declara a mensalidade e o teste grátis, os dois números que a página
- * já mostra na tela. Declarar aqui um preço diferente do que está escrito acima
- * é o tipo de contradição que derruba o rich result inteiro — por isso os dois
- * lados leem a MESMA constante `PRECO`.
+ * `offers` declara a faixa de preço dos planos mensais — os mesmos números que
+ * a seção de preço mostra. Declarar aqui um preço diferente do que está na
+ * tela é o tipo de contradição que derruba o rich result inteiro — por isso
+ * os dois lados leem os MESMOS planos, da tabela que cobra.
  */
-const DADOS_ESTRUTURADOS = {
-  "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  name: MARCA.nome,
-  applicationCategory: "BusinessApplication",
-  applicationSubCategory: "Sistema de agendamento para barbearia",
-  operatingSystem: "Web, Android, iOS",
-  description:
-    "Programa para barbearia com agenda online, ficha de cliente, caixa, fiado e " +
-    "controle de comissão. Os clientes agendam sozinhos pelo celular.",
-  inLanguage: "pt-BR",
-  url: absoluta("/"),
-  screenshot: absoluta("/capturas/painel-hoje.png"),
-  offers: {
-    "@type": "Offer",
-    price: PRECO.mensal.toFixed(2),
-    priceCurrency: "BRL",
-    category: "subscription",
-  },
-  featureList: [
-    "Agenda por profissional, com bloqueio de horário sobreposto",
-    "Agendamento online pelo celular do cliente",
-    "Ficha de cliente com histórico e observações",
-    "Caixa com pagamento dividido",
-    "Controle de fiado",
-    "Cálculo e pagamento de comissão",
-    "Relatórios de faturamento e desempenho",
-    "Acesso separado para assistente, sem ver dinheiro",
-  ],
-  provider: { "@type": "Organization", name: MARCA.autor, email: EMAIL_COMERCIAL },
-};
+function dadosEstruturados(planos: PlanoPublico[]) {
+  const mensais = planos
+    .map((p) => Number(p.monthly_price))
+    .filter((v) => Number.isFinite(v) && v > 0);
 
-export default function LandingPage() {
+  return {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: MARCA.nome,
+    applicationCategory: "BusinessApplication",
+    applicationSubCategory: "Sistema de agendamento para barbearia",
+    operatingSystem: "Web, Android, iOS",
+    description:
+      "Programa para barbearia com agenda online, ficha de cliente, caixa, fiado e " +
+      "controle de comissão. Os clientes agendam sozinhos pelo celular.",
+    inLanguage: "pt-BR",
+    url: absoluta("/"),
+    screenshot: absoluta("/capturas/painel-hoje.png"),
+    // Faixa de preço dos planos MENSAIS, lida da tabela que cobra. Sem planos
+    // (falha de leitura), o bloco sai inteiro: melhor nenhum preço declarado do
+    // que um diferente do que a página mostra.
+    ...(mensais.length > 0
+      ? {
+          offers: {
+            "@type": "AggregateOffer",
+            lowPrice: Math.min(...mensais).toFixed(2),
+            highPrice: Math.max(...mensais).toFixed(2),
+            offerCount: mensais.length,
+            priceCurrency: "BRL",
+            category: "subscription",
+          },
+        }
+      : {}),
+    featureList: [
+      "Agenda por profissional, com bloqueio de horário sobreposto",
+      "Agendamento online pelo celular do cliente",
+      "Ficha de cliente com histórico e observações",
+      "Caixa com pagamento dividido",
+      "Controle de fiado",
+      "Cálculo e pagamento de comissão",
+      "Relatórios de faturamento e desempenho",
+      "Acesso separado para assistente, sem ver dinheiro",
+    ],
+    provider: { "@type": "Organization", name: MARCA.autor, email: EMAIL_COMERCIAL },
+  };
+}
+
+export default async function LandingPage() {
+  const planos = await carregarPlanosPublicos();
+
   return (
     <div className="min-h-dvh bg-bg">
       {/* JSON-LD. O conteúdo é nosso e fixo — não há entrada de usuário aqui,
           que é o que tornaria este dangerouslySetInnerHTML perigoso de fato. */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(DADOS_ESTRUTURADOS) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(dadosEstruturados(planos)) }}
       />
 
       {/* ---------- Topo ---------- */}
@@ -242,20 +258,24 @@ export default function LandingPage() {
           <Logo />
 
           <div className="flex items-center gap-1 sm:gap-2">
-            <ThemeToggle />
             {/* Em 375px a linha logo + tema + os dois botões estoura por ~11px
-                e alarga o documento inteiro. "Criar conta" é a ação que
-                converte, então "Entrar" é a que sai — /criar-conta leva para o
-                login de quem já tem conta.
+                e alarga o documento inteiro. Quem sai no celular é o TEMA: os
+                dois botões são as duas portas do barbeiro — "Criar conta" para
+                quem chega, "Entrar" para quem já tem barbearia — e nenhuma das
+                duas pode sumir. O tema continua nas telas de login e cadastro.
 
-                O `hidden` vai no wrapper, não no botão: o botão já traz
-                `inline-flex`, que vence o `hidden` por vir depois no CSS. */}
+                O `hidden` vai no wrapper: o botão do tema traz a própria
+                classe de display, que venceria o `hidden` por vir depois. */}
             <span className="hidden sm:contents">
-              <LinkButton href="/entrar" variante="ghost" tamanho="sm">
-                Entrar
-              </LinkButton>
+              <ThemeToggle />
             </span>
-            <LinkButton href="/criar-conta" variante="primary" tamanho="sm">
+            <LinkButton href="/entrar" variante="ghost" tamanho="sm">
+              Entrar
+            </LinkButton>
+            {/* Da landing, "Criar conta" é SEMPRE de barbearia: a landing vende
+                o sistema para o dono. O cliente cria a conta dele pelo fluxo
+                de agendamento, que leva para /criar-conta sem o `?tipo=`. */}
+            <LinkButton href="/criar-conta?tipo=barbearia" variante="primary" tamanho="sm">
               Criar conta
             </LinkButton>
           </div>
@@ -281,19 +301,20 @@ export default function LandingPage() {
                   onde o Google tira o resultado. O h1 passou a fazer o trabalho
                   que só ele faz: convencer em dois segundos. */}
               <h1 className="mt-5 text-4xl leading-[1.1] text-ink sm:text-5xl lg:text-6xl">
-                Corte. O resto{" "}
-                <span className="text-brass">é com a gente</span>.
+                Corte. O resto <span className="text-brass">é com a gente</span>.
               </h1>
 
               <p className="mt-5 max-w-xl text-base leading-relaxed text-ink-soft sm:text-lg">
-                Sistema de agendamento para barbearia com agenda online, ficha de cliente,
-                caixa, fiado e controle de comissão numa tela só. Seu cliente marca o
-                horário sozinho pelo celular, e no fim do dia o caixa já está fechado — sem
-                caderno, sem planilha, sem achismo.
+                Sistema de agendamento para barbearia com agenda online, ficha de cliente, caixa,
+                fiado e controle de comissão numa tela só. Seu cliente marca o horário sozinho pelo
+                celular, e no fim do dia o caixa já está fechado — sem caderno, sem planilha, sem
+                achismo.
               </p>
 
-              {/* Três CTAs, duas audiências. O dono é o primário e vai para o
-                  WhatsApp (ele não se cadastra sozinho); o cliente final tem
+              {/* Três CTAs, duas audiências. O dono é o primário e vai direto
+                  para o cadastro da barbearia (desde o setup guiado ele se
+                  cadastra sozinho; quem quer conversar antes acha o WhatsApp
+                  em Preço e em Contato); o cliente final tem
                   caminho próprio, porque ele TAMBÉM cria conta aqui — e até
                   agora só encontrava o "Criar conta" pequeno do topo.
 
@@ -302,13 +323,11 @@ export default function LandingPage() {
                   linhas sem estourar a caixa. */}
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <LinkButton
-                  href={ZAP}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href="/criar-conta?tipo=barbearia"
                   tamanho="lg"
                   larguraTotal
                   className="sm:w-auto"
-                  iconeEsquerda={<MessageCircle className="h-5 w-5" aria-hidden />}
+                  iconeEsquerda={<Store className="h-5 w-5" aria-hidden />}
                 >
                   Quero na minha barbearia
                 </LinkButton>
@@ -335,7 +354,7 @@ export default function LandingPage() {
               </div>
 
               <p className="mt-4 text-sm text-ink-faint">
-                {PRECO.diasGratis} dias para testar. Sem cartão, sem fidelidade.
+                {PRECO.diasGratis} dias grátis para testar. Sem cartão.
               </p>
             </div>
 
@@ -343,9 +362,7 @@ export default function LandingPage() {
             <div className="border-gradient p-5 shadow-float">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-ink-faint">
-                    Hoje
-                  </p>
+                  <p className="text-xs font-medium uppercase tracking-wide text-ink-faint">Hoje</p>
                   <p className="text-lg font-semibold text-ink">Sexta, 14 ago</p>
                 </div>
                 <span className="rounded-chip bg-money-soft px-2.5 py-1 text-xs font-medium text-money">
@@ -378,9 +395,7 @@ export default function LandingPage() {
                       <span className="block truncate text-sm font-medium text-ink">
                         {linha.nome}
                       </span>
-                      <span className="block truncate text-xs text-ink-faint">
-                        {linha.servico}
-                      </span>
+                      <span className="block truncate text-xs text-ink-faint">{linha.servico}</span>
                     </span>
                     <span className="shrink-0 rounded-chip bg-brass-soft px-2.5 py-1 text-xs font-medium text-brass-deep">
                       Concluir
@@ -400,18 +415,14 @@ export default function LandingPage() {
                 O caderno funciona — até o dia em que não funciona.
               </h2>
               <p className="mt-4 text-base leading-relaxed text-ink-soft">
-                Nenhum barbeiro perde cliente por cortar mal. Perde por horário marcado
-                errado, por não lembrar de quem devia e por não saber o que sobrou no fim do
-                mês.
+                Nenhum barbeiro perde cliente por cortar mal. Perde por horário marcado errado, por
+                não lembrar de quem devia e por não saber o que sobrou no fim do mês.
               </p>
             </div>
 
             <div className="mt-10 grid gap-4 sm:grid-cols-2">
               {DORES.map((dor) => (
-                <div
-                  key={dor.titulo}
-                  className="rounded-card border border-line bg-bg p-5"
-                >
+                <div key={dor.titulo} className="rounded-card border border-line bg-bg p-5">
                   <span className="grid h-10 w-10 place-items-center rounded-field bg-danger-soft text-danger">
                     <dor.icone className="h-5 w-5" aria-hidden />
                   </span>
@@ -430,8 +441,8 @@ export default function LandingPage() {
               O que um software para barbearia precisa ter — e nada além disso.
             </h2>
             <p className="mt-4 text-base leading-relaxed text-ink-soft">
-              Nada de módulo que você nunca vai abrir. Se o barbeiro não usa toda semana,
-              não está aqui.
+              Nada de módulo que você nunca vai abrir. Se o barbeiro não usa toda semana, não está
+              aqui.
             </p>
           </div>
 
@@ -445,9 +456,7 @@ export default function LandingPage() {
                   <recurso.icone className="h-5 w-5" aria-hidden />
                 </span>
                 <h3 className="mt-4 text-base font-semibold text-ink">{recurso.titulo}</h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">
-                  {recurso.texto}
-                </p>
+                <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">{recurso.texto}</p>
               </div>
             ))}
           </div>
@@ -464,8 +473,8 @@ export default function LandingPage() {
                 Veja o programa por dentro, antes de falar com a gente.
               </h2>
               <p className="mt-4 text-base leading-relaxed text-ink-soft">
-                São telas do sistema rodando de verdade — não desenho de como poderia ser.
-                Os nomes e valores são de uma barbearia de demonstração.
+                São telas do sistema rodando de verdade — não desenho de como poderia ser. Os nomes
+                e valores são de uma barbearia de demonstração.
               </p>
             </div>
 
@@ -474,18 +483,14 @@ export default function LandingPage() {
         </section>
 
         {/* ---------- Como funciona ---------- */}
-        <section
-          id="como-funciona"
-          className="border-y border-line bg-surface"
-        >
+        <section id="como-funciona" className="border-y border-line bg-surface">
           <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
             <div className="max-w-2xl">
               <h2 className="text-3xl font-semibold leading-tight text-ink sm:text-4xl">
                 Do primeiro contato ao primeiro agendamento.
               </h2>
               <p className="mt-4 text-base leading-relaxed text-ink-soft">
-                Você não precisa configurar nada sozinho. A gente monta e te entrega
-                funcionando.
+                Você não precisa configurar nada sozinho. A gente monta e te entrega funcionando.
               </p>
             </div>
 
@@ -496,9 +501,7 @@ export default function LandingPage() {
                     {passo.numero}
                   </span>
                   <h3 className="mt-4 text-lg font-semibold text-ink">{passo.titulo}</h3>
-                  <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">
-                    {passo.texto}
-                  </p>
+                  <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">{passo.texto}</p>
                 </li>
               ))}
             </ol>
@@ -509,68 +512,108 @@ export default function LandingPage() {
                 <strong className="font-semibold text-ink">
                   Não precisa mudar como você trabalha.
                 </strong>{" "}
-                Quem prefere marcar no balcão continua marcando — você lança na agenda em
-                dois toques. O app é para quem quiser agendar sozinho, de madrugada, sem te
-                incomodar.
+                Quem prefere marcar no balcão continua marcando — você lança na agenda em dois
+                toques. O app é para quem quiser agendar sozinho, de madrugada, sem te incomodar.
               </p>
             </div>
           </div>
         </section>
 
-        {/* ---------- Preço ---------- */}
+        {/* ---------- Preço ----------
+            Os valores vêm da tabela `plans`, a mesma que cobra. As regras de
+            cancelamento e devolução ecoam o item 5 dos Termos — mudou lá, muda
+            aqui. Nada de "cancelou, para na hora": no semestral e no anual o
+            acesso segue até o fim do período. */}
         <section id="preco" className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
-          <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+          <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
             <div>
               <h2 className="text-3xl font-semibold leading-tight text-ink sm:text-4xl">
-                Um preço só. Sem taxa por agendamento.
+                O preço acompanha a sua equipe. Sem taxa por agendamento.
               </h2>
               <p className="mt-4 text-base leading-relaxed text-ink-soft">
-                Sem cobrança por cliente cadastrado, sem porcentagem em cima do que você
-                fatura. Você paga a mensalidade e usa à vontade.
+                Sem cobrança por cliente cadastrado, sem porcentagem em cima do que você fatura. O
+                plano é pelo número de profissionais que atendem na sua agenda.
               </p>
-              <p className="mt-4 text-sm text-ink-faint">
-                Cancelou, para na hora. Sem multa e sem fidelidade.
-              </p>
-            </div>
-
-            <div className="border-gradient p-6 shadow-float sm:p-8">
-              <p className="text-sm font-medium text-brass-deep">Plano único</p>
-
-              <p className="mt-3 flex items-baseline gap-1.5">
-                <span className="tnum text-5xl font-semibold text-ink">
-                  {brl(PRECO.mensal)}
-                </span>
-                <span className="text-base text-ink-faint">/mês</span>
+              <p className="mt-4 text-sm leading-relaxed text-ink-faint">
+                Os primeiros {PRECO.diasGratis} dias são grátis, sem cartão. No mensal, cancele
+                quando quiser. No semestral e no anual você paga menos, e tem 7 dias para desistir
+                com o dinheiro de volta.{" "}
+                <Link href="/termos" className="text-brass hover:underline">
+                  Ver os termos
+                </Link>
+                .
               </p>
 
-              <p className="mt-2 text-sm text-ink-soft">
-                Os primeiros {PRECO.diasGratis} dias são gratuitos. Não pedimos cartão para
-                começar.
-              </p>
-
-              <ul className="mt-6 space-y-2.5">
+              <p className="mt-8 text-sm font-medium text-ink">Todos os planos incluem</p>
+              <ul className="mt-3 space-y-2.5">
                 {INCLUI.map((item) => (
                   <li key={item} className="flex items-start gap-2.5">
-                    <Check
-                      className="mt-0.5 h-4 w-4 shrink-0 text-money"
-                      aria-hidden
-                    />
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-money" aria-hidden />
                     <span className="text-sm leading-relaxed text-ink-soft">{item}</span>
                   </li>
                 ))}
               </ul>
+            </div>
+
+            <div className="border-gradient p-6 shadow-float sm:p-8">
+              {planos.length > 0 ? (
+                <ul className="flex flex-col gap-3">
+                  {planos.map((plano) => {
+                    const anual = plano.precos.find((p) => p.cycle === "annual");
+                    return (
+                      <li
+                        key={plano.id}
+                        className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-card border border-line bg-surface p-4"
+                      >
+                        <div>
+                          <p className="font-semibold text-ink">{plano.name}</p>
+                          <p className="text-sm text-ink-soft">{faixaDoPlano(plano)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="flex items-baseline justify-end gap-1">
+                            <span className="tnum text-2xl font-semibold text-ink">
+                              {brl(plano.monthly_price)}
+                            </span>
+                            <span className="text-sm text-ink-faint">/mês</span>
+                          </p>
+                          {anual?.per_month ? (
+                            <p className="tnum text-xs text-money">
+                              ou {brl(anual.per_month)}/mês no anual
+                            </p>
+                          ) : null}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : null}
+
+              <p className="mt-4 text-xs leading-relaxed text-ink-faint">
+                Semestral com 10% e anual com 20% de desconto, no cartão ou no Pix — no cartão,
+                também em 6x ou 12x sem juros.
+              </p>
 
               <LinkButton
-                href={ZAP}
-                target="_blank"
-                rel="noopener noreferrer"
+                href="/criar-conta?tipo=barbearia"
                 tamanho="lg"
                 larguraTotal
-                className="mt-7"
-                iconeEsquerda={<MessageCircle className="h-5 w-5" aria-hidden />}
+                className="mt-6"
+                iconeEsquerda={<Store className="h-5 w-5" aria-hidden />}
               >
-                Começar pelo WhatsApp
+                Começar os {PRECO.diasGratis} dias grátis
               </LinkButton>
+
+              <p className="mt-4 text-center text-sm text-ink-soft">
+                Mais de 8 profissionais?{" "}
+                <a
+                  href={ZAP}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-brass hover:underline"
+                >
+                  Fale com a gente
+                </a>
+              </p>
             </div>
           </div>
         </section>
@@ -582,8 +625,8 @@ export default function LandingPage() {
               Manda uma mensagem. A gente responde de verdade.
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-ink-soft">
-              Sem formulário comprido e sem robô. Chama no WhatsApp que a gente te mostra o
-              sistema rodando e tira suas dúvidas na hora.
+              Sem formulário comprido e sem robô. Chama no WhatsApp que a gente te mostra o sistema
+              rodando e tira suas dúvidas na hora.
             </p>
 
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">

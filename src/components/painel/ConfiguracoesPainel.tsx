@@ -11,11 +11,12 @@ import {
 } from "@/app/actions/shop";
 import { AvisosWhatsapp } from "@/components/painel/AvisosWhatsapp";
 import { BeneficiosBarbearia } from "@/components/painel/BeneficiosBarbearia";
+import { EditorHorarios, linhasDeHorario } from "@/components/painel/EditorHorarios";
 import { LocalizacaoBarbearia } from "@/components/painel/LocalizacaoBarbearia";
 import { Button, CampoImagem, Field, Input, Select, Textarea } from "@/components/ui";
 import type { Amenity, Barbershop, BusinessHour, PainelWhatsapp } from "@/lib/types";
 import { buscarCEP, ESTADOS } from "@/lib/viacep";
-import { DIAS_SEMANA, horaCurta, mascaraCEP, mascaraTelefone, soDigitos } from "@/lib/utils";
+import { mascaraCEP, mascaraTelefone, soDigitos } from "@/lib/utils";
 
 /**
  * As configurações da barbearia. Só o dono chega aqui.
@@ -438,19 +439,7 @@ function FormDados({ loja, urlPublica }: { loja: Barbershop; urlPublica: string 
 function FormHorarios({ horarios }: { horarios: BusinessHour[] }) {
   const router = useRouter();
 
-  const [linhas, setLinhas] = useState<LinhaHorario[]>(() =>
-    Array.from({ length: 7 }, (_, weekday) => {
-      const h = horarios.find((x) => x.weekday === weekday);
-      return {
-        weekday,
-        fechado: h?.is_closed ?? true,
-        abre: horaCurta(h?.opens_at) || "09:00",
-        fecha: horaCurta(h?.closes_at) || "19:00",
-        almocoInicio: horaCurta(h?.break_start),
-        almocoFim: horaCurta(h?.break_end),
-      };
-    }),
-  );
+  const [linhas, setLinhas] = useState<LinhaHorario[]>(() => linhasDeHorario(horarios));
 
   const [erro, setErro] = useState<string | null>(null);
   const [mensagem, setMensagem] = useState<string | null>(null);
@@ -484,58 +473,7 @@ function FormHorarios({ horarios }: { horarios: BusinessHour[] }) {
         </p>
       </div>
 
-      <ul className="flex flex-col gap-2">
-        {linhas.map((l) => (
-          <li
-            key={l.weekday}
-            className="flex flex-wrap items-center gap-2 rounded-card border border-line bg-surface p-3"
-          >
-            <span className="w-20 shrink-0 text-sm font-medium text-ink">
-              {DIAS_SEMANA[l.weekday]}
-            </span>
-
-            <label className="flex h-11 shrink-0 cursor-pointer items-center gap-1.5 text-xs text-ink-soft">
-              <input
-                type="checkbox"
-                checked={!l.fechado}
-                onChange={(e) => alterar(l.weekday, { fechado: !e.target.checked })}
-                className="h-4 w-4 accent-brass"
-              />
-              Aberto
-            </label>
-
-            {l.fechado ? (
-              <span className="text-sm text-ink-faint">Fechado</span>
-            ) : (
-              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                <CampoHora
-                  valor={l.abre}
-                  rotulo={`Abre ${DIAS_SEMANA[l.weekday]}`}
-                  aoMudar={(v) => alterar(l.weekday, { abre: v })}
-                />
-                <span className="text-ink-faint">—</span>
-                <CampoHora
-                  valor={l.fecha}
-                  rotulo={`Fecha ${DIAS_SEMANA[l.weekday]}`}
-                  aoMudar={(v) => alterar(l.weekday, { fecha: v })}
-                />
-
-                <span className="ml-2 text-xs text-ink-faint">almoço</span>
-                <CampoHora
-                  valor={l.almocoInicio}
-                  rotulo={`Início do almoço ${DIAS_SEMANA[l.weekday]}`}
-                  aoMudar={(v) => alterar(l.weekday, { almocoInicio: v })}
-                />
-                <CampoHora
-                  valor={l.almocoFim}
-                  rotulo={`Fim do almoço ${DIAS_SEMANA[l.weekday]}`}
-                  aoMudar={(v) => alterar(l.weekday, { almocoFim: v })}
-                />
-              </div>
-            )}
-          </li>
-        ))}
-      </ul>
+      <EditorHorarios linhas={linhas} aoAlterar={alterar} />
 
       {erro ? (
         <p className="flex items-start gap-2 text-sm text-danger" role="alert">
@@ -555,25 +493,5 @@ function FormHorarios({ horarios }: { horarios: BusinessHour[] }) {
         Salvar horário
       </Button>
     </section>
-  );
-}
-
-function CampoHora({
-  valor,
-  rotulo,
-  aoMudar,
-}: {
-  valor: string;
-  rotulo: string;
-  aoMudar: (v: string) => void;
-}) {
-  return (
-    <input
-      type="time"
-      value={valor}
-      aria-label={rotulo}
-      onChange={(e) => aoMudar(e.target.value)}
-      className="tnum h-11 w-[92px] rounded-field bg-surface-2 px-2 text-sm text-ink outline-none focus:ring-2 focus:ring-brass focus:ring-inset"
-    />
   );
 }

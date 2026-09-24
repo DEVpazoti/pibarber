@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 
 import { createClient } from "@/lib/supabase/server";
-import type { Profile, ShopContext, UserRole } from "@/lib/types";
+import type { Profile, ShopContext, SubscriptionStatus, UserRole } from "@/lib/types";
 
 /**
  * ARMADILHA QUE CUSTA CARO — leia antes de mexer em qualquer catch daqui.
@@ -103,6 +103,15 @@ export const requireShopContext = cache(async (): Promise<ShopContext> => {
     let shopId: string | null = null;
 
     let shopName: string | null = null;
+    // Só o dono passa pelo setup. Para o assistente vale sempre "concluído":
+    // ele não configura a loja, e travá-lo fora do painel por causa do dono
+    // não ajudaria ninguém.
+    let setupConcluido = true;
+    // Vem na MESMA consulta, pela coluna calculada `assinatura_em_dia`
+    // (26_assinaturas.sql). Nulo (consulta falhou) conta como liberada: travar
+    // o painel por falha de leitura seria pior do que deixá-lo abrir.
+    let assinaturaLiberada = true;
+    let assinatura: ShopContext["assinatura"] = null;
 
     if (perfil.role === "owner") {
       // `name` vem JUNTO do `id` de propósito (G4 do PERFORMANCE.md): o layout
@@ -111,15 +120,48 @@ export const requireShopContext = cache(async (): Promise<ShopContext> => {
       // Trazer a coluna a mais aqui não custa nada — a consulta já ia acontecer.
       const { data, error } = await supabase
         .from("barbershops")
-        .select("id, name")
+        .select(
+          "id, name, setup_completed_at, assinatura_em_dia, subscriptions(status, trial_ends_at, paid_until, asaas_subscription_id, asaas_installment_id)",
+        )
         .eq("owner_id", perfil.id)
         .order("created_at", { ascending: true })
         .limit(1)
-        .maybeSingle();
+        .maybeSingle()
+        // Coluna calculada: o parser de tipos do supabase-js não a enxerga.
+        .overrideTypes<
+          {
+            id: string;
+            name: string;
+            setup_completed_at: string | null;
+            assinatura_em_dia: boolean | null;
+            subscriptions: {
+              status: SubscriptionStatus;
+              trial_ends_at: string;
+              paid_until: string | null;
+              asaas_subscription_id: string | null;
+              asaas_installment_id: string | null;
+            } | null;
+          },
+          { merge: false }
+        >();
 
       if (error) console.error("[auth] falha ao achar a barbearia do dono:", error);
       shopId = data?.id ?? null;
       shopName = data?.name ?? null;
+      setupConcluido = Boolean(data?.setup_completed_at);
+      assinaturaLiberada = data?.assinatura_em_dia !== false;
+      // Para a faixa de aviso do painel ("faltam 3 dias"). Só o dono vê.
+      assinatura = data?.subscriptions
+        ? {
+            status: data.subscriptions.status,
+            trialEndsAt: data.subscriptions.trial_ends_at,
+            paidUntil: data.subscriptions.paid_until,
+            // Parcelado no cartão é cobrança avulsa: não renova sozinho.
+            renovaSozinho: !(
+              data.subscriptions.asaas_installment_id && !data.subscriptions.asaas_subscription_id
+            ),
+          }
+        : null;
     } else {
       // O assistente NÃO ganha consulta nova aqui, e o `shopId` continua vindo
       // do perfil, não do resultado. Derivá-lo da linha devolvida mudaria o
@@ -131,12 +173,14 @@ export const requireShopContext = cache(async (): Promise<ShopContext> => {
       if (shopId) {
         const { data, error } = await supabase
           .from("barbershops")
-          .select("name")
+          .select("name, assinatura_em_dia")
           .eq("id", shopId)
-          .maybeSingle();
+          .maybeSingle()
+          .overrideTypes<{ name: string; assinatura_em_dia: boolean | null }, { merge: false }>();
 
         if (error) console.error("[auth] falha ao ler o nome da barbearia:", error);
         shopName = data?.name ?? null;
+        assinaturaLiberada = data?.assinatura_em_dia !== false;
       }
     }
 
@@ -146,6 +190,9 @@ export const requireShopContext = cache(async (): Promise<ShopContext> => {
       profile: perfil,
       shopId,
       shopName,
+      setupConcluido,
+      assinaturaLiberada,
+      assinatura,
       // Dinheiro é só do dono. A RLS impõe o mesmo no banco — isto aqui só
       // evita renderizar (e buscar) o que o assistente não pode ver.
       podeVerDinheiro: perfil.role === "owner" || perfil.is_platform_admin,

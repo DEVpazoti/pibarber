@@ -32,7 +32,7 @@ export const metadata: Metadata = {
 };
 
 /** Atualize junto com o texto. É a data que o rodapé e a lei pedem. */
-const ATUALIZADO_EM = "19 de setembro de 2026";
+const ATUALIZADO_EM = "23 de setembro de 2026";
 
 export default function PoliticaDePrivacidade() {
   const suporte = dadosSuporte();
@@ -54,92 +54,103 @@ export default function PoliticaDePrivacidade() {
       </header>
 
       <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-        <h1 className="font-display text-3xl font-semibold text-ink">
-          Política de Privacidade
-        </h1>
-        <p className="mt-2 text-sm text-ink-faint">
-          Atualizada em {ATUALIZADO_EM}.
-        </p>
+        <h1 className="font-display text-3xl font-semibold text-ink">Política de Privacidade</h1>
+        <p className="mt-2 text-sm text-ink-faint">Atualizada em {ATUALIZADO_EM}.</p>
 
         <p className="mt-6 text-ink-soft">
-          O {MARCA.nome} é uma plataforma de agendamento e gestão para barbearias, desenvolvida
-          por {MARCA.autor}. Esta política explica quais dados pessoais tratamos, por quê, com
-          quem eles são compartilhados e o que você pode exigir da gente a qualquer momento.
-          Ela vale para o site, para o aplicativo do cliente e para o painel usado pelas
-          barbearias.
+          O {MARCA.nome} é uma plataforma de agendamento e gestão para barbearias, desenvolvida por{" "}
+          {MARCA.autor}. Esta política explica quais dados pessoais tratamos, por quê, com quem eles
+          são compartilhados e o que você pode exigir da gente a qualquer momento. Ela vale para o
+          site, para o aplicativo do cliente e para o painel usado pelas barbearias.
         </p>
 
         <Secao titulo="1. Quem trata os seus dados">
-          <P>
-            Há duas responsabilidades diferentes, e é importante separá-las:
-          </P>
+          <P>Há duas responsabilidades diferentes, e é importante separá-las:</P>
           <Lista>
             <li>
               <strong className="text-ink">O {MARCA.nome}</strong> ({MARCA.autor}) opera a
-              plataforma: a sua conta, a busca por barbearias, o agendamento, as notificações e
-              a segurança de tudo isso.
+              plataforma: a sua conta, a busca por barbearias, o agendamento, as notificações e a
+              segurança de tudo isso.
             </li>
             <li>
-              <strong className="text-ink">A barbearia que você escolhe</strong> trata a ficha
-              que ela mantém sobre você dentro do sistema — seus atendimentos, suas
-              preferências de corte, o que você deve ou pagou. Ela decide o que anota ali.
+              <strong className="text-ink">A barbearia que você escolhe</strong> trata a ficha que
+              ela mantém sobre você dentro do sistema — seus atendimentos, suas preferências de
+              corte, o que você deve ou pagou. Ela decide o que anota ali.
             </li>
           </Lista>
           <P>
             Ou seja: quando você agenda numa barbearia, os seus dados de contato passam a ser
-            visíveis para a equipe dela. É o mesmo que aconteceria se você deixasse o seu nome
-            e telefone no balcão — só que organizado.
+            visíveis para a equipe dela. É o mesmo que aconteceria se você deixasse o seu nome e
+            telefone no balcão — só que organizado.
           </P>
         </Secao>
 
         <Secao titulo="2. Quais dados coletamos">
           <P>
-            <strong className="text-ink">Quando você cria uma conta:</strong> nome, e-mail,
-            telefone e senha. Opcionalmente, data de nascimento, gênero e foto de perfil. Se
-            você entra com o Google, recebemos dele o seu nome, e-mail e foto.
+            <strong className="text-ink">Quando você cria uma conta:</strong> nome, e-mail, telefone
+            e senha. Opcionalmente, data de nascimento, gênero e foto de perfil. Se você entra com o
+            Google, recebemos dele o seu nome, e-mail e foto.
           </P>
           <P>
-            <strong className="text-ink">Quando você agenda:</strong> a barbearia, o
-            profissional, os serviços, o horário e as observações que você escrever. Se o
-            atendimento for para outra pessoa (um filho, por exemplo), o nome e a data de
-            nascimento que você cadastrar para ela.
+            <strong className="text-ink">Quando você agenda:</strong> a barbearia, o profissional,
+            os serviços, o horário e as observações que você escrever. Se o atendimento for para
+            outra pessoa (um filho, por exemplo), o nome e a data de nascimento que você cadastrar
+            para ela.
           </P>
           <P>
-            <strong className="text-ink">Quando você agenda sem criar conta:</strong> apenas
-            nome e telefone. Guardamos também uma versão embaralhada (hash) do endereço de
-            origem da requisição, que serve só para conter spam e não permite identificar você.
+            <strong className="text-ink">Quando você agenda sem criar conta:</strong> apenas nome e
+            telefone. Guardamos também uma versão embaralhada (hash) do endereço de origem da
+            requisição, que serve só para conter spam e não permite identificar você.
           </P>
           <P>
             <strong className="text-ink">Se você preencher endereço:</strong> CEP, rua, número,
             complemento, bairro, cidade e estado.
           </P>
           <P>
-            <strong className="text-ink">Sua localização:</strong> só quando você toca no
-            filtro &ldquo;Próximas&rdquo; e o navegador pede a sua autorização. Ela é usada
-            naquele instante para ordenar as barbearias por distância e{" "}
+            <strong className="text-ink">Sua localização:</strong> só quando você toca no filtro
+            &ldquo;Próximas&rdquo; e o navegador pede a sua autorização. Ela é usada naquele
+            instante para ordenar as barbearias por distância e{" "}
             <strong className="text-ink">não é gravada</strong> no nosso banco.
           </P>
           <P>
-            <strong className="text-ink">Uso da plataforma:</strong> barbearias favoritas,
-            perfis que você visitou, entradas em lista de espera e avaliações que você escreveu.
+            <strong className="text-ink">Uso da plataforma:</strong> barbearias favoritas, perfis
+            que você visitou, entradas em lista de espera e avaliações que você escreveu.
           </P>
           <P>
             <strong className="text-ink">A ficha na barbearia:</strong> além do seu contato, a
-            barbearia registra o histórico de atendimentos, valores, eventuais faltas, dívidas
-            em aberto (fiado) e observações internas dela sobre o seu atendimento.
+            barbearia registra o histórico de atendimentos, valores, eventuais faltas, dívidas em
+            aberto (fiado) e observações internas dela sobre o seu atendimento.
           </P>
           <P>
-            Não coletamos documentos, não pedimos CPF e não processamos dados de cartão — o
-            pagamento do atendimento acontece fora da plataforma, direto com a barbearia.
+            <strong className="text-ink">Se você cadastra uma barbearia:</strong> o seu nome, e-mail
+            e celular (que não pode ser o de outra barbearia); os dados da loja — nome, link,
+            telefone, WhatsApp, endereço, a localização no mapa, logo e fotos; o horário de
+            funcionamento, os serviços e preços; e o nome e o percentual de comissão dos
+            profissionais que você cadastrar.
+          </P>
+          <P>
+            <strong className="text-ink">Se a barbearia assina um plano:</strong> pedimos o CPF ou
+            CNPJ de quem paga, que vai direto para o Asaas, nosso parceiro de pagamentos (item 4).
+            Do nosso lado guardamos só o plano, o período, as faturas (valor, vencimento e situação)
+            e os códigos que ligam a barbearia à cobrança no Asaas. O cartão é digitado na página do
+            próprio Asaas:{" "}
+            <strong className="text-ink">
+              o {MARCA.nome} não recebe nem guarda dados de cartão
+            </strong>
+            .
+          </P>
+          <P>
+            Do cliente que agenda, não pedimos documento nem CPF, e não processamos pagamento — o
+            atendimento é pago direto na barbearia.
           </P>
         </Secao>
 
         <Secao titulo="3. Por que usamos esses dados">
           <Lista>
             <li>
-              <strong className="text-ink">Para executar o serviço</strong> que você pediu:
-              criar e manter sua conta, marcar, alterar e cancelar horários, mostrar seu
-              histórico e permitir que a barbearia organize a agenda dela.
+              <strong className="text-ink">Para executar o serviço</strong> que você pediu: criar e
+              manter sua conta, marcar, alterar e cancelar horários, mostrar seu histórico e
+              permitir que a barbearia organize a agenda dela.
             </li>
             <li>
               <strong className="text-ink">Para avisar você</strong> sobre os seus horários:
@@ -150,15 +161,19 @@ export default function PoliticaDePrivacidade() {
               agendamentos falsos, que prejudicam as barbearias com horários vazios.
             </li>
             <li>
-              <strong className="text-ink">Para cumprir obrigações legais</strong> quando
-              formos obrigados a guardar ou apresentar registros.
+              <strong className="text-ink">Para cobrar o plano da barbearia</strong>: gerar as
+              cobranças, confirmar os pagamentos e liberar ou pausar o acesso conforme o plano.
+            </li>
+            <li>
+              <strong className="text-ink">Para cumprir obrigações legais</strong> quando formos
+              obrigados a guardar ou apresentar registros — inclusive os fiscais das cobranças.
             </li>
           </Lista>
           <P>
-            As bases legais são, conforme o caso, a execução do contrato entre você e o
-            {" "}{MARCA.nome}, o cumprimento de obrigação legal, o legítimo interesse (segurança
-            e prevenção a fraude) e o seu consentimento — este último para a localização e para
-            as mensagens de WhatsApp, que você pode retirar quando quiser.
+            As bases legais são, conforme o caso, a execução do contrato entre você e o {MARCA.nome}
+            , o cumprimento de obrigação legal, o legítimo interesse (segurança e prevenção a
+            fraude) e o seu consentimento — este último para a localização e para as mensagens de
+            WhatsApp, que você pode retirar quando quiser.
           </P>
         </Secao>
 
@@ -177,65 +192,82 @@ export default function PoliticaDePrivacidade() {
               armazenamento das imagens.
             </li>
             <li>
-              <strong className="text-ink">Vercel</strong> — hospedagem do site e do
-              aplicativo.
+              <strong className="text-ink">Vercel</strong> — hospedagem do site e do aplicativo.
             </li>
             <li>
-              <strong className="text-ink">Google</strong> — apenas se você optar por entrar
-              com a conta Google, e para converter o endereço das barbearias em coordenadas no
-              mapa.
+              <strong className="text-ink">Google</strong> — apenas se você optar por entrar com a
+              conta Google, e para converter o endereço das barbearias em coordenadas no mapa.
             </li>
             <li>
-              <strong className="text-ink">Meta (WhatsApp)</strong> — o seu telefone e o
-              conteúdo da mensagem, quando enviamos um aviso de agendamento. Ver o item 5.
+              <strong className="text-ink">Meta (WhatsApp)</strong> — o seu telefone e o conteúdo da
+              mensagem, quando enviamos um aviso de agendamento. Ver o item 5.
+            </li>
+            <li>
+              <strong className="text-ink">Asaas</strong> — só para barbearias que assinam um plano:
+              nome da barbearia, CPF ou CNPJ de quem paga, e-mail e celular do dono, para gerar e
+              cobrar as faturas. O pagamento com cartão ou Pix acontece na página do próprio Asaas.
+            </li>
+            <li>
+              <strong className="text-ink">ViaCEP</strong> — o CEP digitado, para preencher o
+              restante do endereço.
+            </li>
+            <li>
+              <strong className="text-ink">OpenStreetMap</strong> — o mapa em que a barbearia marca
+              a própria localização e, quando o Google não encontra, a busca do endereço da loja em
+              coordenadas.
             </li>
             <li>
               <strong className="text-ink">Autoridades</strong>, quando houver ordem legal.
             </li>
           </Lista>
           <P>
-            Esses serviços podem processar dados fora do Brasil. Nesses casos, a transferência
-            é feita com as garantias exigidas pela LGPD.
+            Esses serviços podem processar dados fora do Brasil. Nesses casos, a transferência é
+            feita com as garantias exigidas pela LGPD.
           </P>
         </Secao>
 
         <Secao titulo="5. As mensagens de WhatsApp">
           <P>
-            O {MARCA.nome} envia mensagens pelo WhatsApp usando a API oficial da Meta. Elas
-            partem do <strong className="text-ink">número da plataforma</strong>, não do número
-            da barbearia, e são sempre sobre um horário seu:
+            O {MARCA.nome} envia mensagens pelo WhatsApp usando a API oficial da Meta. Elas partem
+            do <strong className="text-ink">número da plataforma</strong>, não do número da
+            barbearia, e são sempre sobre um horário seu:
           </P>
           <Lista>
-            <li><strong className="text-ink">Confirmação</strong>, quando você agenda;</li>
-            <li><strong className="text-ink">Lembrete</strong>, na véspera do atendimento;</li>
-            <li><strong className="text-ink">Cancelamento</strong>, se o horário for cancelado.</li>
+            <li>
+              <strong className="text-ink">Confirmação</strong>, quando você agenda;
+            </li>
+            <li>
+              <strong className="text-ink">Lembrete</strong>, na véspera do atendimento;
+            </li>
+            <li>
+              <strong className="text-ink">Cancelamento</strong>, se o horário for cancelado.
+            </li>
           </Lista>
           <P>
-            Não enviamos propaganda por WhatsApp, e a barbearia não escreve o texto dessas
-            mensagens — ele é fixo, igual para todas.
+            Não enviamos propaganda por WhatsApp, e a barbearia não escreve o texto dessas mensagens
+            — ele é fixo, igual para todas.
           </P>
           <P>
             <strong className="text-ink">Para parar de receber</strong>, responda{" "}
-            <strong className="text-ink">PARAR</strong> na própria conversa. A saída vale para
-            todas as barbearias e é imediata: o que já estava na fila para você é descartado.
-            Guardamos o seu número numa lista de dispensa justamente para conseguir respeitar
-            esse pedido — ela existe só para isso.
+            <strong className="text-ink">PARAR</strong> na própria conversa. A saída vale para todas
+            as barbearias e é imediata: o que já estava na fila para você é descartado. Guardamos o
+            seu número numa lista de dispensa justamente para conseguir respeitar esse pedido — ela
+            existe só para isso.
           </P>
           <P>
-            Registramos se a mensagem foi entregue e lida, para saber se o aviso chegou. Não
-            lemos e não guardamos o conteúdo de outras mensagens que você mandar para esse
-            número.
+            Registramos se a mensagem foi entregue e lida, para saber se o aviso chegou. Não lemos e
+            não guardamos o conteúdo de outras mensagens que você mandar para esse número.
           </P>
         </Secao>
 
         <Secao titulo="6. Cookies">
           <P>
-            Usamos o mínimo: um cookie de sessão, que mantém você conectado, e uma preferência
-            de tema (claro ou escuro) guardada no seu próprio navegador.
+            Usamos o mínimo: um cookie de sessão, que mantém você conectado, e uma preferência de
+            tema (claro ou escuro) guardada no seu próprio navegador.
           </P>
           <P>
-            <strong className="text-ink">Não usamos cookies de publicidade</strong> nem
-            rastreadores de terceiros para perfilar você.
+            <strong className="text-ink">Não usamos cookies de publicidade</strong> nem rastreadores
+            de terceiros para perfilar você.
           </P>
         </Secao>
 
@@ -245,9 +277,9 @@ export default function PoliticaDePrivacidade() {
             perfil.
           </P>
           <P>
-            O histórico de atendimentos permanece com a barbearia, porque é o registro
-            comercial dela — assim como a anotação num caderno de balcão. Registros
-            financeiros podem ser mantidos pelos prazos legais.
+            O histórico de atendimentos permanece com a barbearia, porque é o registro comercial
+            dela — assim como a anotação num caderno de balcão. Registros financeiros podem ser
+            mantidos pelos prazos legais.
           </P>
           <P>
             O pedido de não receber mensagens é mantido por tempo indeterminado, de propósito:
@@ -257,10 +289,10 @@ export default function PoliticaDePrivacidade() {
 
         <Secao titulo="8. Como apagar seus dados" id="exclusao-de-dados">
           <P>
-            <strong className="text-ink">Pelo aplicativo, na hora:</strong> entre na sua conta,
-            vá em <strong className="text-ink">Perfil → Meus dados</strong> e toque em{" "}
-            <strong className="text-ink">Excluir conta</strong>. A exclusão é imediata e não
-            tem volta. Somem:
+            <strong className="text-ink">Pelo aplicativo, na hora:</strong> entre na sua conta, vá
+            em <strong className="text-ink">Perfil → Meus dados</strong> e toque em{" "}
+            <strong className="text-ink">Excluir conta</strong>. A exclusão é imediata e não tem
+            volta. Somem:
           </P>
           <Lista>
             <li>o seu perfil, o endereço e as pessoas que você agenda;</li>
@@ -277,13 +309,18 @@ export default function PoliticaDePrivacidade() {
             pedindo a exclusão. Respondemos em até 15 dias.
           </P>
           <P>
-            <strong className="text-ink">O que não some junto, e por quê:</strong> o registro
-            dos atendimentos que você fez continua com a barbearia, mas{" "}
-            <strong className="text-ink">desligado da sua conta</strong> — é o documento
-            comercial dela, como a anotação num caderno de balcão, e pode ser exigido por
-            obrigação fiscal. Da mesma forma, se você pediu para não receber mensagens,
-            guardamos o seu número numa lista de dispensa: é justamente ela que impede você de
-            voltar a receber.
+            <strong className="text-ink">Conta de barbearia:</strong> a exclusão é feita por pedido,
+            pelos mesmos canais — a conta do dono está ligada à barbearia, à equipe e aos clientes
+            dela, e apagá-la exige desfazer essas ligações com cuidado. O histórico de cobranças do
+            plano é mantido pelos prazos legais.
+          </P>
+          <P>
+            <strong className="text-ink">O que não some junto, e por quê:</strong> o registro dos
+            atendimentos que você fez continua com a barbearia, mas{" "}
+            <strong className="text-ink">desligado da sua conta</strong> — é o documento comercial
+            dela, como a anotação num caderno de balcão, e pode ser exigido por obrigação fiscal. Da
+            mesma forma, se você pediu para não receber mensagens, guardamos o seu número numa lista
+            de dispensa: é justamente ela que impede você de voltar a receber.
           </P>
           <P>
             Para entrar no WhatsApp: responda <strong className="text-ink">PARAR</strong> na
@@ -302,37 +339,34 @@ export default function PoliticaDePrivacidade() {
             <li>revogar o consentimento — inclusive das mensagens de WhatsApp.</li>
           </Lista>
           <P>
-            Boa parte disso você resolve sozinho, na hora, pelo aplicativo: os dados do perfil
-            ficam em <strong className="text-ink">Perfil → Meus dados</strong>. Para o resto,
-            fale com a gente pelos canais do item 12 — respondemos em até 15 dias.
+            Boa parte disso você resolve sozinho, na hora, pelo aplicativo: os dados do perfil ficam
+            em <strong className="text-ink">Perfil → Meus dados</strong>. Para o resto, fale com a
+            gente pelos canais do item 12 — respondemos em até 15 dias.
           </P>
         </Secao>
 
         <Secao titulo="10. Segurança">
           <P>
             O acesso aos dados é controlado no próprio banco: cada pessoa só enxerga o que lhe
-            pertence, e cada barbearia só enxerga os clientes dela. O tráfego é criptografado e
-            as senhas nunca são armazenadas em texto claro.
+            pertence, e cada barbearia só enxerga os clientes dela. O tráfego é criptografado e as
+            senhas nunca são armazenadas em texto claro.
           </P>
           <P>
-            Nenhum sistema é infalível. Se acontecer um incidente que possa trazer risco a
-            você, avisaremos você e a Autoridade Nacional de Proteção de Dados, como manda a
-            lei.
+            Nenhum sistema é infalível. Se acontecer um incidente que possa trazer risco a você,
+            avisaremos você e a Autoridade Nacional de Proteção de Dados, como manda a lei.
           </P>
         </Secao>
 
         <Secao titulo="11. Crianças e adolescentes">
           <P>
-            A conta é para maiores de 18 anos. Um responsável pode cadastrar um dependente
-            (um filho, por exemplo) para agendar o atendimento dele — e nesse caso só pedimos o
-            nome e, se quiser, a data de nascimento.
+            A conta é para maiores de 18 anos. Um responsável pode cadastrar um dependente (um
+            filho, por exemplo) para agendar o atendimento dele — e nesse caso só pedimos o nome e,
+            se quiser, a data de nascimento.
           </P>
         </Secao>
 
         <Secao titulo="12. Como falar com a gente">
-          <P>
-            Para qualquer dúvida sobre esta política ou para exercer os seus direitos:
-          </P>
+          <P>Para qualquer dúvida sobre esta política ou para exercer os seus direitos:</P>
           <ul className="mt-2 flex flex-col gap-1 text-ink-soft">
             <li>
               E-mail:{" "}
@@ -364,8 +398,8 @@ export default function PoliticaDePrivacidade() {
 
         <Secao titulo="13. Mudanças nesta política">
           <P>
-            Se algo mudar no que coletamos ou em como usamos, atualizamos esta página e a data
-            do topo. Mudança relevante é avisada pelo aplicativo.
+            Se algo mudar no que coletamos ou em como usamos, atualizamos esta página e a data do
+            topo. Mudança relevante é avisada pelo aplicativo.
           </P>
         </Secao>
 
