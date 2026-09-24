@@ -21,7 +21,7 @@ export default async function HistoricoPage({
 }: {
   searchParams: Promise<{ q?: string; de?: string; ate?: string }>;
 }) {
-  await requireRole(["client"]);
+  await requireRole(["client", "owner", "assistant"]);
   const { q = "", de = "", ate = "" } = await searchParams;
 
   const agendamentos = await carregarMeusAgendamentos({

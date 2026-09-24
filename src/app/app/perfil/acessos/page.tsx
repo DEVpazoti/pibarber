@@ -13,7 +13,7 @@ export default async function AcessosPage({
 }: {
   searchParams: Promise<{ erro?: string }>;
 }) {
-  await requireRole(["client"]);
+  await requireRole(["client", "owner", "assistant"]);
   const { erro } = await searchParams;
 
   let metodos: MetodoDeAcesso[] = [];
@@ -28,8 +28,7 @@ export default async function AcessosPage({
     else {
       metodos = (data?.identities ?? []).map((i) => ({
         provider: i.provider,
-        identificador:
-          typeof i.identity_data?.email === "string" ? i.identity_data.email : null,
+        identificador: typeof i.identity_data?.email === "string" ? i.identity_data.email : null,
         criadoEm: i.created_at ?? null,
       }));
     }

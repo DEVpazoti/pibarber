@@ -2051,6 +2051,7 @@ export type Database = {
       }
       limite_de_profissionais: { Args: { shop: string }; Returns: number }
       mark_no_show: { Args: { p_appointment: string }; Returns: string }
+      meus_agendamentos_ids: { Args: never; Returns: string[] }
       my_shop_id: { Args: never; Returns: string }
       next_walk_in_number: { Args: { p_shop: string }; Returns: number }
       owns_customer: { Args: { p_customer: string }; Returns: boolean }

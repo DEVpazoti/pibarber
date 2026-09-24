@@ -8,8 +8,10 @@
 > Quem terminar um agente atualiza este arquivo ao final — é a regra que
 > mantém o próximo agente informado.
 
-**Atualizado por último:** 2026-09-15 — atualizado pelo agente 01 (WhatsApp oficial).
-**Commit de referência:** branch `agente-01-whatsapp`, a partir de `be8c876`.
+**Atualizado por último:** 2026-09-24 — setup guiado, assinaturas (Asaas),
+super admin, relatos e as duas portas de login (agente 02).
+**Commit de referência:** branch `feat/setup-barbearia`, commit "feat: duas portas
+de login" (sobre `a3174d3`).
 
 ---
 
@@ -35,12 +37,38 @@ técnico — é o modelo do produto.
 | **Cliente** | `/app` | Busca barbearia por nome, cidade ou proximidade; agenda, acompanha, avalia. PWA |
 | **Dono** | `/painel` | Agenda, clientes, equipe, serviços, caixa, comissão, fiado, fila de espera, relatórios |
 | **Assistente** | `/painel` | Mesmo painel, menu reduzido, sem nada financeiro |
+| **Admin da plataforma** | `/admin` | Super admin: métricas, barbearias, assinaturas, relatos (`profiles.is_platform_admin`) |
 
 Mais `/b/[slug]` (perfil público da barbearia, com agendamento aberto a quem
-não tem conta) e `/admin` (a plataforma cadastra lojas).
+não tem conta), `/configurar` (setup guiado da loja nova) e `/assinatura`
+(plano e pagamento da loja).
 
 **O profissional não é um usuário.** `professionals` é uma linha da agenda, não
-uma conta. Quem tem login é dono, assistente e cliente.
+uma conta. Quem tem login é dono, assistente, cliente e admin.
+
+### Uma conta, dois lados — as duas portas de login
+
+Uma mesma conta pode ser **dono (ou assistente) E cliente**. O papel em
+`profiles.role` não muda; o que decide o lado é a **porta por onde a pessoa
+entrou**, guardada no cookie `pibarber-lado` (`src/lib/lado.ts`):
+
+| Porta | Endereço | Leva a |
+|---|---|---|
+| "Entrar" da landing | `/entrar?tipo=barbearia` | `/painel` (sem barbearia: convite em `/app/perfil/barbearia?pela=porta-da-barbearia`) |
+| "Criar conta" da landing | `/criar-conta?tipo=barbearia` | cadastro do dono → `/configurar` |
+| "Sou cliente" | `/entrar` / `/criar-conta` | `/app` |
+
+- Não há botão de trocar de lado: **sai e entra pela outra porta** (decisão do
+  usuário). Cada tela de login tem um link discreto para a outra.
+- O middleware manda quem está no lado errado para a casa do seu lado
+  (`/app` ↔ `/painel`). O admin sempre vai para `/admin`.
+- O Google OAuth carrega a porta em `/callback?lado=…`.
+- **No lado cliente, "meu agendamento" NÃO é "o que a RLS me deixa ver".** O
+  dono vê pela RLS a agenda inteira da loja; mostrar isso em "Meus
+  agendamentos" foi o bug que derrubou a primeira tentativa. A regra é
+  `meus_agendamentos_ids()` (30): ficha ligada ao perfil, ou marcado online
+  pela pessoa FORA da loja em que ela trabalha. `client_home`, a lista, o
+  histórico, avaliar e cancelar pelo app usam essa regra.
 
 ---
 
@@ -50,6 +78,7 @@ uma conta. Quem tem login é dono, assistente e cliente.
 Next.js 15 (App Router) · React 19 · TypeScript · Tailwind CSS v4
 Supabase (Postgres + Auth + Storage) · Leaflet · Recharts · Vercel
 Meta WhatsApp Cloud API (fetch nativo, sem SDK)
+Asaas API v3 (cobrança das assinaturas; fetch nativo, sem SDK)
 ```
 
 O que **não** existe neste projeto, e que é fácil assumir por engano:
@@ -70,7 +99,12 @@ O que **não** existe neste projeto, e que é fácil assumir por engano:
 ### Scripts
 
 ```bash
-npm run dev -- --port 3001   # a porta 3001 importa: NEXT_PUBLIC_SITE_URL espelha ela
+npm run dev                  # porta 3000; NEXT_PUBLIC_SITE_URL tem de espelhar o endereço usado
+# Teste de fora de casa (celular, webhook do Asaas sandbox): túnel ngrok
+#   NEXT_PUBLIC_SITE_URL=https://<seu-subdominio>.ngrok-free.dev npm run dev
+#   ngrok http 3000
+node supabase/aplicar-sql.mjs supabase/NN_arquivo.sql   # aplica uma migração no banco do .env.local
+node supabase/aplicar-sql.mjs --tipos                   # regera database.types.ts
 npm run build
 npm run typecheck            # tsc --noEmit
 npm run lint
@@ -84,22 +118,29 @@ node --no-warnings scripts/whatsapp-templates.mjs --ver|--enviar|--listar   # te
 ```
 src/
   app/
-    (auth)/            entrar, criar-conta, callback (Route Handler do OAuth), email-confirmado
+    (auth)/            entrar, criar-conta (?tipo=barbearia = porta do dono), callback
+                       (Route Handler do OAuth, lê ?lado=), email-confirmado
     app/               O APP DO CLIENTE (PWA): agendamentos, buscar, notificações, perfil/*
+                       (perfil/barbearia = "abrir minha barbearia")
     painel/            O PAINEL DO DONO/ASSISTENTE: agenda, caixa, clientes, comissões,
                        equipe, espera, fiado, pendências, relatórios, serviços, avaliações,
                        configurações
     b/[slug]/          Perfil público da barbearia + /agendar (funciona sem login)
     a/[token]/         Acompanhamento de agendamento feito sem cadastro (link com token)
-    admin/             Cadastro de lojas pela plataforma
+    configurar/        Setup guiado da loja nova (6 etapas) — ver §12
+    assinatura/        Plano, pagamento e faturas da loja — ver §13
+    sem-barbearia/     Dono sem loja (ou loja removida)
+    admin/             SUPER ADMIN: visão geral, barbearias (+ ficha [id]), feedbacks — §14
     api/
       cron/whatsapp/     O "worker": lembretes + despacho da fila. Protegido por CRON_SECRET
       webhooks/whatsapp/ Webhook da Meta: status de entrega, templates, opt-out
+      webhooks/asaas/    Webhook do Asaas: pagamentos da assinatura (header asaas-access-token)
     actions/           SERVER ACTIONS — toda escrita passa por aqui
-      admin, appointments, auth, booking, client, customers, money, publico,
-      services, shop, team
+      admin, admin-assinatura, admin-notas, admin-visualizacao, appointments,
+      assinatura, auth, booking, client, customers, feedback, money, publico,
+      services, setup, shop, team
   components/
-    admin, auth, booking, charts, client, landing, painel, ui
+    admin, assinatura, auth, booking, charts, client, landing, painel, setup, ui
   lib/
     supabase/          client.ts (browser), server.ts (RSC/action), admin.ts (service role),
                        publico.ts (leitura anônima)
@@ -107,6 +148,13 @@ src/
     whatsapp/          catalogo.ts (os textos), graph.ts (HTTP da Meta), fila.ts,
                        templates.ts, avisos.ts (o gancho das actions), painel.ts,
                        telefone.ts, rotulos.ts
+    asaas.ts           HTTP do Asaas (clientes, assinaturas, parcelamentos, estornos)
+    assinatura.ts      textos/contas de TELA da assinatura (pode ir ao navegador)
+    assinatura-servidor.ts  sincronizar com o Asaas, temPagamentoConfirmado — só servidor
+    admin.ts           tipos e situações da lista do /admin
+    visualizacao.ts    cookie do "ver como o dono" (somente leitura)
+    lado.ts            cookie da porta de login (cliente | barbearia)
+    nova-barbearia.ts  criação da loja (cadastro do dono e "abrir minha barbearia")
     auth.ts, config.ts, database.types.ts, env.ts, erros.ts, telefone.ts,
     utils.ts, periodo.ts, imagens.ts, geocoding.ts, viacep.ts, suporte.ts, ...
 supabase/              MIGRAÇÕES SQL NUMERADAS (ver §4)
@@ -128,8 +176,14 @@ função SQL.
 
 ### Migrações
 
-Arquivos em `supabase/`, numerados, rodados **à mão no SQL Editor do Supabase**,
-na ordem. Não há CLI de migração neste projeto.
+Arquivos em `supabase/`, numerados, rodados na ordem — no SQL Editor do
+Supabase ou com `node supabase/aplicar-sql.mjs <arquivo>` (usa o `.env.local`).
+Não há CLI de migração neste projeto.
+
+⚠️ **Dois bancos.** O `.env.local` aponta para o projeto Supabase de **dev**;
+a configuração de **produção** fica em `.env.producao.local`. Para aplicar em
+produção sem trocar o `.env.local`, rode o script a partir de uma cópia
+isolada com o env de produção. **Produção só com autorização explícita.**
 
 ```
 01_schema.sql      extensões, enums, tabelas, índices, a constraint de horário
@@ -138,9 +192,15 @@ na ordem. Não há CLI de migração neste projeto.
 04_seed.sql        4 barbearias de exemplo
 05–06              operação (promover admin, apagar dados)
 07…24              migrações incrementais (24 = WhatsApp)
+25_setup_barbearia       setup guiado, blocked_at, concluir_setup_barbearia, telefone único de dono
+26_assinaturas           plans/plan_prices, subscriptions, pagamentos, eventos, assinatura_liberada
+27_agenda_padrao_15_dias max_advance_days padrão 15
+28_feedbacks             relatos do painel (+ bucket privado `feedbacks`)
+29_admin_dashboard       admin_notes, admin_audit, admin_barbearias(), admin_metricas()
+30_lado_cliente          meus_agendamentos_ids() e client_home com a regra do lado cliente
 ```
 
-**A próxima migração é a `25_`.** Regras para escrever uma:
+**A próxima migração é a `31_`.** Regras para escrever uma:
 
 - Idempotente de ponta a ponta. `create table if not exists`, `do $$ ... exception
   when duplicate_object then null; end $$` para enums e constraints, `create index
@@ -186,6 +246,15 @@ na ordem. Não há CLI de migração neste projeto.
   tabela como outbox.
 - `whatsapp_messages`, `whatsapp_templates`, `whatsapp_opt_outs` — a
   integração de WhatsApp (§9). **Só a service role lê e escreve.**
+- `barbershops.setup_completed_at` (nulo = loja no setup) e
+  `barbershops.blocked_at` (bloqueio da PLATAFORMA). `is_active` é o portão
+  público e é derivado: setup concluído e sem bloqueio (§12).
+- `plans` + view `plan_prices`, `subscriptions` (uma por loja, criada por
+  trigger), `subscription_payments` (espelho das faturas do Asaas),
+  `subscription_events` (estorno, cancelamento, extensão de teste) — §13.
+- `feedbacks` — relatos enviados pelo painel (§14).
+- `admin_notes` (notas internas por loja) e `admin_audit` (quem visualizou o
+  quê) — só admin da plataforma.
 
 ---
 
@@ -212,7 +281,13 @@ Está tudo em `AUDITORIA_SEGURANCA.md`; o resumo operacional:
   delas ganhar policy ou grant.
 - **Endpoint público que dispara efeito** (cron, webhook) confere segredo ou
   assinatura com `crypto.timingSafeEqual`, e falha FECHADO quando o segredo
-  não está configurado.
+  não está configurado. Vale para o webhook do Asaas (`ASAAS_WEBHOOK_TOKEN`).
+- **"Ver como o dono" é somente leitura no SERVIDOR:** com o cookie
+  `pibarber-ver-loja`, `requireShopContext()` recusa toda server action
+  (`ModoSomenteLeitura`). Não depende de esconder botão.
+- **Colunas que o dono NÃO pode escrever** (`is_active`, `setup_completed_at`,
+  `blocked_at`, tudo de `subscriptions`) ficam fora do grant por coluna; muda
+  só por função `SECURITY DEFINER` ou service role.
 
 ---
 
@@ -281,7 +356,16 @@ padrão — nada de `process.env.X!` espalhado pelo código.
 
 Integração OPCIONAL segue `envWhatsapp()`: devolve `null` quando o interruptor
 não está definido (o projeto sobe sem ela), e só aí as demais viram
-obrigatórias.
+obrigatórias. `envAsaas()` segue o mesmo desenho: sem `ASAAS_API_KEY` a tela
+de assinatura abre mas não cobra; o prefixo da chave (`$aact_hmlg_` ×
+`$aact_prod_`) decide sandbox ou produção. A chave começa com `$` — no `.env`
+precisa de barra invertida (`\$aact_…`), senão o Next a lê vazia.
+
+### Datas na tela
+
+`diaBR` para data sem hora (vencimento, fim de teste em dia), `dataBR` /
+`dataHoraBR` para momento com hora. Data sem hora passada a `new Date()` cai no
+dia anterior no fuso de São Paulo.
 
 ---
 
@@ -339,6 +423,20 @@ resultado" para um problema de permissão.
 exclui a execução concorrente: o status continua `pending` depois do update, e
 as duas seguem. Use `whatsapp_reivindicar()` (skip locked + prazo de posse) ou
 o mesmo padrão.
+
+**`next build` com o `next dev` ligado quebra o dev.** Os dois usam `.next`.
+Pare o dev, rode o build, apague `.next` e suba o dev de novo.
+
+**RLS do dono vaza para o lado cliente.** O dono tem acesso de leitura a toda a
+agenda da loja; qualquer tela de cliente que confie só na RLS mostra os
+horários da barbearia como se fossem dele. Use `meus_agendamentos_ids()`.
+
+**Pix em assinatura do Asaas vira boleto híbrido** (boleto com QR Pix). Pix
+compensa na hora; o boleto leva até 3 dias úteis. Decisão: aceitar e avisar
+na tela.
+
+**Fatura cancelada não é "em aberto".** Use `situacaoDaFatura()`
+(`src/lib/assinatura.ts`) — um mapa só para o dono e o /admin.
 
 **Webhook: ler o corpo antes de conferir a assinatura.** `request.json()`
 consome o corpo e reserializar muda os bytes — o HMAC nunca bate. Leia
@@ -454,6 +552,7 @@ Classificação de erro (transitório ou não) em `classificarErro()`,
 | # | Agente | Status |
 |---|---|---|
 | 01 | WhatsApp oficial (Meta Cloud API): outbox, templates, webhook, cron | ✅ código entregue — ativação em produção pendente (ver abaixo) |
+| 02 | Setup guiado, assinaturas (Asaas), super admin, relatos, duas portas de login | ✅ entregue na `feat/setup-barbearia` — migrações 28–30 pendentes em produção (ver abaixo) |
 
 > Cada agente acrescenta a própria linha aqui e um bloco "O que o agente N
 > entregou" ao final deste arquivo, no mesmo formato: o que era, o que ficou, o
@@ -498,6 +597,80 @@ Criadas pelo agente 01:
   - Status do webhook que chega antes de o envio gravar o `wamid` se perde. É raro; a linha fica `sent`.
   - Quem agenda depois das 18h da véspera recebe confirmação e lembrete quase juntos. É a regra pedida ("se o instante passou, agora").
   - A palavra de saída "cancelar" pode ser escrita por quem queria cancelar o HORÁRIO. A pessoa sai da lista e o horário não é cancelado. Está na lista porque foi pedido; reavaliar com dado de uso.
+
+Criadas pelo agente 02:
+
+- **(f) Estorno é manual fora do /admin.** O botão de estorno do /admin chama
+  o Asaas; devolução pedida por outro canal é feita no painel do Asaas e
+  registrada como `external_refund`.
+- **(g) Sem avisos por e-mail.** Teste acabando, fatura vencida e renovação do
+  parcelado só aparecem na tela. Próximo passo planejado: Resend.
+- **(h) A regra do lado cliente mora em dois lugares:** `meus_agendamentos_ids()`
+  e `client_home` (30). Mudou uma, mude a outra.
+- **(i) Excluir conta** só existe para quem é só cliente; quem tem barbearia
+  pede pela Central de ajuda.
+
+---
+
+## 12. Setup guiado e cadastro do dono
+
+- O dono se cadastra sozinho em `/criar-conta?tipo=barbearia` (sem Google: o
+  cadastro exige celular). E-mail e celular são **únicos entre donos**
+  (índice `profiles_telefone_dono_unico`, telefone só com dígitos).
+- Cliente logado também abre a própria loja em `/app/perfil/barbearia`, com a
+  mesma conta (ver "Uma conta, dois lados", §1).
+- A loja nasce com `is_active = false` e `setup_completed_at` nulo; o painel
+  manda para `/configurar` (6 etapas em `components/setup/SetupGuiado.tsx`:
+  sua barbearia, onde fica, horário, serviços, quem atende, regras de
+  agendamento). Agenda nasce aberta por 15 dias (27).
+- **Só `concluir_setup_barbearia(shop)` publica a loja:** confere dono, mapa,
+  um dia aberto, um serviço e um profissional ativos. Loja com `blocked_at`
+  termina o setup mas continua escondida.
+- `blocked_at` é o bloqueio da plataforma; o trigger `barbershops_guard_bloqueio`
+  força `is_active = false` e só deixa o admin (ou a service role) mexer nele.
+
+## 13. Assinaturas (Asaas)
+
+Regras de negócio no cabeçalho de `supabase/26_assinaturas.sql` — **não mude
+sem falar com o dono do produto.** Resumo:
+
+- Planos por profissionais ATIVOS: Solo (1) R$ 69,99 · Equipe (2–4) R$ 99,99
+  · Barbearia (5–8) R$ 159,99 por mês. Mais de 8: contato direto.
+- Semestral −10%, anual −20%. Preços derivados pela view `plan_prices`
+  (arredonda o TOTAL).
+- Teste de 14 dias a partir da criação da loja (as lojas antigas ganharam 14
+  dias na migração). Período pago tem **1 dia de tolerância**; teste não.
+- Cartão ou Pix, sempre na página do Asaas (nenhum dado de cartão passa pelo
+  servidor). Parcelado 6x/12x sem juros no semestral/anual, taxa absorvida; o
+  parcelado não renova sozinho — link de renovação 15 dias antes do fim.
+- Reembolso: 7 dias de arrependimento com devolução integral após cada
+  pagamento; depois, sem devolução proporcional.
+- **`assinatura_liberada(shop)` é A regra** de "pode operar". Vencida: o painel
+  só mostra `/assinatura`, a página pública não aceita agendamento novo
+  (trigger `appointments_exige_assinatura`), nada é apagado, pagar libera na
+  hora. Ativar profissional além do plano é recusado
+  (`professionals_limite_do_plano`).
+- `paid_until` só é empurrado pelo **webhook do Asaas** (service role). A
+  página `/assinatura` também sincroniza com o Asaas quando há fatura
+  pendente — rede de segurança se o webhook atrasar.
+- Antes de pagar, o dono pode trocar plano e forma de pagamento
+  (`temPagamentoConfirmado`). O dono cancela a renovação sozinho; estorno,
+  cancelamento e extensão de teste ficam no /admin (`subscription_events`).
+
+## 14. Super admin e relatos
+
+- `/admin` (layout só para `is_platform_admin`): **Visão geral**
+  (`admin_metricas()`: MRR, receita do mês, pagantes, conversão do teste,
+  cancelamentos; e a lista "Precisa de atenção"), **Barbearias**
+  (`admin_barbearias()`, filtros, CSV no formato do Excel brasileiro) e a
+  **ficha** de cada loja (dono, assinatura, uso, notas internas, relatos,
+  linha do tempo, "Ver como o dono", "Gerenciar assinatura", bloquear).
+- Admins: Rafael Vetrano e Guilherme Pazoti, mesmo poder (o do Guilherme
+  ainda precisa ser promovido — `docs/promover-dono.md` / `05_criar_admin.sql`).
+- **Relatos:** botão "Reportar problema ou dar sugestão" no painel (dono e
+  assistente), com print opcional no bucket privado `feedbacks` (caminho sempre
+  `<shopId>/…`, `upsert: false`). Limite por loja em `feedbacks_limite`. A
+  lista fica só em `/admin/feedbacks`; a resposta é pelo WhatsApp.
 
 ---
 
@@ -586,3 +759,40 @@ Rodado em 2026-09-15. "Local" = Postgres 16 em Docker com as migrações 01–23
 - **Marketing, conversa bidirecional, bot, Embedded Signup, mídia/botões,
   notificar dono/profissional, SMS/e-mail/push**: fora de escopo por decisão.
 - **Nenhuma alteração em `notifications`** nem no sininho.
+
+---
+
+## O que o agente 02 entregou
+
+### O que ficou
+
+Branch `feat/setup-barbearia`: `a4f13e3` (cadastro, setup, planos com Asaas),
+`ffcf2b5` (trocar plano/forma antes de pagar), `a3174d3` (super admin,
+relatos, ajustes da assinatura) e o commit das duas portas de login
+(migração 30, `src/lib/lado.ts`, telas de /entrar e do app).
+
+### Estado das migrações
+
+| Migração | Dev | Produção |
+|---|---|---|
+| 25, 26, 27 | ✅ | ✅ |
+| 28, 29, 30 | ✅ | ⏳ aplicar ANTES do deploy do código que as usa |
+
+### O que se descobriu
+
+- **A primeira tentativa de "uma conta, dois lados" foi revertida inteira**:
+  "Meus agendamentos" do dono mostrava a agenda da loja (RLS). A versão atual
+  resolve na regra (`meus_agendamentos_ids`), não na tela.
+- **Seed de teste com agendamento `online` do dono na própria loja** entraria
+  como "dele" — por isso a regra exclui a loja em que a pessoa trabalha.
+- **Upload com `upsert: true` no bucket `feedbacks` é negado pela RLS**
+  (upsert exige policy de update).
+- **O Google OAuth não traz telefone** — por isso o cadastro de barbearia não
+  tem Google.
+
+### O que NÃO foi feito, e por quê
+
+- **Avisos por e-mail (Resend):** planejado para depois do admin.
+- **Revisão jurídica** de Termos e Privacidade (textos atualizados, não revisados).
+- **E-mail do Guilherme** para promovê-lo a admin em dev e produção.
+- **Build de produção** das duas portas (parar o dev antes — §8).

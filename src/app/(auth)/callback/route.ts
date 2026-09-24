@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { ROTA_EMAIL_CONFIRMADO } from "@/lib/auth";
+import { casaDoLado, COOKIE_LADO, OPCOES_COOKIE_LADO, type Lado } from "@/lib/lado";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -22,6 +23,9 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");
   const proximo = searchParams.get("proximo");
+  // A porta de onde a pessoa veio (login com Google ou link de confirmação):
+  // ver src/lib/lado.ts.
+  const porta: Lado = searchParams.get("lado") === "barbearia" ? "barbearia" : "cliente";
   const erro = searchParams.get("error");
   const erroDescricao = searchParams.get("error_description");
 
@@ -48,7 +52,10 @@ export async function GET(request: NextRequest) {
     // `access_denied`. Não é falha nossa e não adianta pedir "tente de novo" —
     // a pessoa desistiu de propósito, e a mensagem tem que reconhecer isso.
     if (erro === "access_denied") {
-      return recusar(origin, "Você cancelou a entrada com o Google. Pode tentar de novo quando quiser.");
+      return recusar(
+        origin,
+        "Você cancelou a entrada com o Google. Pode tentar de novo quando quiser.",
+      );
     }
 
     // `server_error` e `temporarily_unavailable` são do lado deles.
@@ -91,11 +98,6 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Destino interno vindo do ?proximo= — nunca um domínio de fora.
-  if (proximo && proximo.startsWith("/") && !proximo.startsWith("//")) {
-    return NextResponse.redirect(`${origin}${proximo}`);
-  }
-
   const { data: perfil, error: erroPerfil } = await supabase
     .from("profiles")
     .select("role, is_platform_admin")
@@ -104,11 +106,16 @@ export async function GET(request: NextRequest) {
 
   if (erroPerfil) console.error("[callback] falha ao ler o perfil:", erroPerfil);
 
-  const casa = perfil?.is_platform_admin
-    ? "/admin"
-    : perfil?.role === "owner" || perfil?.role === "assistant"
-      ? "/painel"
-      : "/app";
+  const temBarbearia = perfil?.role === "owner" || perfil?.role === "assistant";
+  const lado: Lado = porta === "barbearia" && temBarbearia ? "barbearia" : "cliente";
 
-  return NextResponse.redirect(`${origin}${casa}`);
+  // Destino interno vindo do ?proximo= — nunca um domínio de fora.
+  const destinoSeguro =
+    proximo && proximo.startsWith("/") && !proximo.startsWith("//") ? proximo : null;
+  const destino =
+    destinoSeguro ?? (perfil?.is_platform_admin ? "/admin" : casaDoLado(porta, temBarbearia));
+
+  const resposta = NextResponse.redirect(`${origin}${destino}`);
+  resposta.cookies.set(COOKIE_LADO, lado, OPCOES_COOKIE_LADO);
+  return resposta;
 }

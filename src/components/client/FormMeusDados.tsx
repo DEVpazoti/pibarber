@@ -98,16 +98,27 @@ export function FormMeusDados({ perfil }: { perfil: Profile }) {
         Salvar
       </Button>
 
-      {/* --- Excluir conta: destrutivo, texto vermelho, sem caixa --------- */}
-      <button
-        type="button"
-        onClick={() => setExcluindoAberto(true)}
-        className="mt-4 h-12 w-full text-center text-sm font-semibold text-danger transition-opacity hover:opacity-80"
-      >
-        Excluir conta
-      </button>
+      {/* --- Excluir conta: destrutivo, texto vermelho, sem caixa ---------
+          Só para quem é SÓ cliente. A conta de quem tem barbearia está ligada
+          à loja, à equipe e aos clientes dela: é excluída por pedido (Política
+          de Privacidade, item 8), e `excluirMinhaConta` também recusa. */}
+      {perfil.role === "client" ? (
+        <>
+          <button
+            type="button"
+            onClick={() => setExcluindoAberto(true)}
+            className="mt-4 h-12 w-full text-center text-sm font-semibold text-danger transition-opacity hover:opacity-80"
+          >
+            Excluir conta
+          </button>
 
-      <ExcluirContaDialog aberto={excluindoAberto} aoFechar={() => setExcluindoAberto(false)} />
+          <ExcluirContaDialog aberto={excluindoAberto} aoFechar={() => setExcluindoAberto(false)} />
+        </>
+      ) : (
+        <p className="mt-6 text-center text-xs leading-relaxed text-ink-faint">
+          Sua conta também é a da barbearia. Para excluí-la, fale com a gente pela Central de ajuda.
+        </p>
+      )}
     </div>
   );
 }
@@ -167,8 +178,8 @@ function ExcluirContaDialog({ aberto, aoFechar }: { aberto: boolean; aoFechar: (
         </ul>
         <p className="rounded-card bg-surface-2 px-4 py-3 text-ink-soft">
           O <strong className="text-ink">histórico de atendimentos</strong> continua com cada
-          barbearia onde você foi atendido — é o registro contábil dela, e não pode ser
-          apagado por você.
+          barbearia onde você foi atendido — é o registro contábil dela, e não pode ser apagado por
+          você.
         </p>
       </div>
     </Modal>

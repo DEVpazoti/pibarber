@@ -21,7 +21,7 @@ export const metadata: Metadata = { title: "Início" };
  * custam meio segundo cada — e a home é a primeira impressão do app.
  */
 export default async function AppPage() {
-  const perfil = await requireRole(["client"]);
+  const perfil = await requireRole(["client", "owner", "assistant"]);
 
   let home: HomeDoCliente = {
     proximo: null,

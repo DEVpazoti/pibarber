@@ -35,8 +35,8 @@ function CadastroBarbearia() {
     <div className="rounded-card border border-line bg-surface p-6 shadow-card sm:p-8">
       <h1 className="text-3xl text-ink">Cadastre sua barbearia</h1>
       <p className="mt-1.5 text-sm text-ink-soft">
-        Crie a conta da sua barbearia. Em seguida a gente configura horário, serviços e equipe
-        com você, passo a passo.
+        Crie a conta da sua barbearia. Em seguida a gente configura horário, serviços e equipe com
+        você, passo a passo.
       </p>
 
       {/* Sem Google: a conta de barbearia precisa do telefone, e o OAuth não
@@ -47,7 +47,10 @@ function CadastroBarbearia() {
 
       <p className="mt-6 text-center text-sm text-ink-soft">
         Já tem uma barbearia no PiBarber?{" "}
-        <Link href="/entrar" className="font-medium text-brass hover:text-brass-deep">
+        <Link
+          href="/entrar?tipo=barbearia"
+          className="font-medium text-brass hover:text-brass-deep"
+        >
           Entrar
         </Link>
       </p>

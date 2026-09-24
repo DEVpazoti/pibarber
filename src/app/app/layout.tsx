@@ -17,7 +17,7 @@ const ID_ROLAGEM = "conteudo-do-app";
  */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   // Não confie só no middleware: toda área protegida confere aqui também.
-  const perfil = await requireRole(["client"]);
+  const perfil = await requireRole(["client", "owner", "assistant"]);
 
   let naoLidas = 0;
   try {

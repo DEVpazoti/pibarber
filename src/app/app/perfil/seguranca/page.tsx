@@ -7,7 +7,7 @@ import { requireRole } from "@/lib/auth";
 export const metadata: Metadata = { title: "Segurança" };
 
 export default async function SegurancaPage() {
-  await requireRole(["client"]);
+  await requireRole(["client", "owner", "assistant"]);
 
   return (
     <>

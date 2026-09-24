@@ -1,9 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect, unstable_rethrow } from "next/navigation";
 
 import { ROTA_EMAIL_CONFIRMADO } from "@/lib/auth";
+import { casaDoLado, COOKIE_LADO, OPCOES_COOKIE_LADO, type Lado } from "@/lib/lado";
 import { urlDoSite } from "@/lib/env";
 import { criarBarbeariaDoDono, telefoneDeOutroDono } from "@/lib/nova-barbearia";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -94,6 +96,8 @@ export async function entrar(entrada: {
   email: string;
   senha: string;
   proximo?: string;
+  /** A porta: "barbearia" (/entrar?tipo=barbearia) ou "cliente" (/entrar). */
+  lado?: Lado;
 }): Promise<ActionResult> {
   const email = entrada.email.trim().toLowerCase();
   const senha = entrada.senha;
@@ -125,14 +129,19 @@ export async function entrar(entrada: {
 
     if (erroPerfil) console.error("[auth] falha ao ler o perfil no login:", erroPerfil);
 
-    const casa = perfil?.is_platform_admin
-      ? "/admin"
-      : perfil?.role === "owner" || perfil?.role === "assistant"
-        ? "/painel"
-        : "/app";
+    if (perfil?.is_platform_admin) {
+      revalidatePath("/", "layout");
+      redirect(proximo ?? "/admin");
+    }
+
+    // A porta decide o lado da sessão (src/lib/lado.ts). Conta só de cliente
+    // pela porta da barbearia vira "cliente" e é convidada a criar a loja.
+    const temBarbearia = perfil?.role === "owner" || perfil?.role === "assistant";
+    const lado: Lado = entrada.lado === "barbearia" && temBarbearia ? "barbearia" : "cliente";
+    (await cookies()).set(COOKIE_LADO, lado, OPCOES_COOKIE_LADO);
 
     revalidatePath("/", "layout");
-    redirect(proximo ?? casa);
+    redirect(proximo ?? casaDoLado(entrada.lado ?? "cliente", temBarbearia));
   } catch (error) {
     unstable_rethrow(error); // deixa o redirect() acima passar
     console.error("[auth] erro inesperado em entrar:", error);
@@ -190,7 +199,7 @@ export async function criarConta(entrada: {
         // para a tela de boas-vindas. O link do e-mail é o único que a pessoa
         // clica horas depois, em outro aparelho — cair direto na home logada,
         // sem uma linha dizendo "deu certo", parece que o clique não fez nada.
-        emailRedirectTo: `${urlDoSite()}/callback?proximo=${encodeURIComponent(ROTA_EMAIL_CONFIRMADO)}`,
+        emailRedirectTo: `${urlDoSite()}/callback?lado=cliente&proximo=${encodeURIComponent(ROTA_EMAIL_CONFIRMADO)}`,
       },
     });
 
@@ -222,17 +231,16 @@ export async function criarConta(entrada: {
 
       // Não desfaz a conta por isso: ela existe e funciona, e o app já pede o
       // telefone de quem está sem ele (AvisoTelefone e o agendamento).
-      if (erroTelefone) console.error("[auth] falha ao gravar o telefone do cliente:", erroTelefone);
+      if (erroTelefone)
+        console.error("[auth] falha ao gravar o telefone do cliente:", erroTelefone);
     }
 
     // Sem sessão = o projeto exige confirmação por e-mail.
     if (!data.session) {
-      return sucesso(
-        undefined,
-        "Conta criada! Confirme o e-mail que enviamos para poder entrar.",
-      );
+      return sucesso(undefined, "Conta criada! Confirme o e-mail que enviamos para poder entrar.");
     }
 
+    (await cookies()).set(COOKIE_LADO, "cliente", OPCOES_COOKIE_LADO);
     revalidatePath("/", "layout");
     redirect("/app"); // cadastro público sempre nasce cliente
   } catch (error) {
@@ -310,7 +318,7 @@ export async function criarContaBarbearia(entrada: {
       password: senha,
       options: {
         data: { full_name: nome },
-        emailRedirectTo: `${urlDoSite()}/callback?proximo=${encodeURIComponent(ROTA_EMAIL_CONFIRMADO)}`,
+        emailRedirectTo: `${urlDoSite()}/callback?lado=barbearia&proximo=${encodeURIComponent(ROTA_EMAIL_CONFIRMADO)}`,
       },
     });
 
@@ -350,6 +358,7 @@ export async function criarContaBarbearia(entrada: {
       );
     }
 
+    (await cookies()).set(COOKIE_LADO, "barbearia", OPCOES_COOKIE_LADO);
     revalidatePath("/", "layout");
     redirect("/configurar");
   } catch (error) {
@@ -364,7 +373,7 @@ export async function criarContaBarbearia(entrada: {
  * esta tela também não deveria. Diz o que fazer nos dois casos possíveis.
  */
 const MENSAGEM_EMAIL_DE_CLIENTE =
-  "Já existe uma conta com este e-mail. Se ela é sua, entre e toque em “Abrir minha barbearia” no Perfil.";
+  "Já existe uma conta com este e-mail. Se ela é sua, entre pela área da barbearia para criar a sua.";
 
 /* ==========================================================================
    Google
@@ -377,6 +386,7 @@ const MENSAGEM_EMAIL_DE_CLIENTE =
  */
 export async function entrarComGoogle(formData: FormData): Promise<void> {
   const proximo = destinoSeguro(formData.get("proximo"));
+  const lado = formData.get("lado") === "barbearia" ? "barbearia" : "cliente";
   let destino: string;
 
   try {
@@ -385,7 +395,7 @@ export async function entrarComGoogle(formData: FormData): Promise<void> {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${urlDoSite()}/callback${proximo ? `?proximo=${encodeURIComponent(proximo)}` : ""}`,
+        redirectTo: `${urlDoSite()}/callback?lado=${lado}${proximo ? `&proximo=${encodeURIComponent(proximo)}` : ""}`,
       },
     });
 
@@ -413,6 +423,8 @@ export async function entrarComGoogle(formData: FormData): Promise<void> {
    ========================================================================== */
 
 export async function sair(): Promise<void> {
+  // O lado da sessão sai junto: a próxima porta escolhe de novo.
+  (await cookies()).delete(COOKIE_LADO);
   try {
     const supabase = await createClient();
     const { error } = await supabase.auth.signOut();

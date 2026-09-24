@@ -17,7 +17,7 @@ export default async function BuscarPage({
 }: {
   searchParams: Promise<{ focar?: string }>;
 }) {
-  await requireRole(["client"]);
+  await requireRole(["client", "owner", "assistant"]);
   const { focar } = await searchParams;
 
   return (
