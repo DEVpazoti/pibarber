@@ -7,7 +7,7 @@ import { requireRole } from "@/lib/auth";
 export const metadata: Metadata = { title: "Meus Dados" };
 
 export default async function MeusDadosPage() {
-  const perfil = await requireRole(["client"]);
+  const perfil = await requireRole(["client", "owner", "assistant"]);
 
   return (
     <>

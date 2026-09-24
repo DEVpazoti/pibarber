@@ -279,21 +279,20 @@ export async function entrarNaEspera(entrada: {
  */
 export async function registrarVisita(barbershopId: string): Promise<void> {
   try {
+    // Qualquer conta logada: quem tem barbearia também é cliente (src/lib/lado.ts).
     const perfil = await getProfile();
-    if (!perfil || perfil.role !== "client") return;
+    if (!perfil) return;
 
     const supabase = await createClient();
 
-    const { error } = await supabase
-      .from("shop_visits")
-      .upsert(
-        {
-          profile_id: perfil.id,
-          barbershop_id: barbershopId,
-          last_viewed_at: new Date().toISOString(),
-        },
-        { onConflict: "profile_id,barbershop_id" },
-      );
+    const { error } = await supabase.from("shop_visits").upsert(
+      {
+        profile_id: perfil.id,
+        barbershop_id: barbershopId,
+        last_viewed_at: new Date().toISOString(),
+      },
+      { onConflict: "profile_id,barbershop_id" },
+    );
 
     if (error) console.error("[barbearia] falha ao registrar a visita:", error);
   } catch (error) {
@@ -336,7 +335,11 @@ export async function avaliarAtendimento(entrada: {
       .maybeSingle();
 
     if (erroLer) return falha(traduzirErroBanco(erroLer, "[avaliação] ler agendamento"));
-    if (!agendamento) return falha("Não encontrei esse atendimento.");
+    // A RLS sozinha não basta: o dono lê toda a agenda da loja dele, e não
+    // pode avaliar como "cliente" um atendimento que não foi dele.
+    if (!agendamento || !(await ehMeuAgendamento(entrada.appointmentId))) {
+      return falha("Não encontrei esse atendimento.");
+    }
     if (agendamento.status !== "completed") {
       return falha("Só dá para avaliar um atendimento concluído.");
     }
@@ -382,6 +385,12 @@ export async function cancelarMeuAgendamento(
     const perfil = await requireProfile();
     const supabase = await createClient();
 
+    // Pelo app, só o que é da própria pessoa. O dono cancela horário da loja
+    // pelo painel — não por aqui, como se fosse cliente.
+    if (!(await ehMeuAgendamento(appointmentId))) {
+      return falha("Não encontrei esse agendamento.");
+    }
+
     const { error } = await supabase.rpc("cancel_appointment", {
       p_appointment: appointmentId,
       p_motivo: motivo?.trim() || undefined,
@@ -400,4 +409,18 @@ export async function cancelarMeuAgendamento(
     unstable_rethrow(error);
     return falha(traduzirErroDesconhecido(error, "[cliente] cancelarMeuAgendamento"));
   }
+}
+
+/**
+ * O agendamento é da pessoa logada COMO CLIENTE? Mesma regra da lista
+ * (`meus_agendamentos_ids()`, 30_lado_cliente.sql).
+ */
+async function ehMeuAgendamento(appointmentId: string): Promise<boolean> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("meus_agendamentos_ids");
+  if (error) {
+    console.error("[cliente] falha ao conferir o agendamento:", error);
+    return false;
+  }
+  return ((data ?? []) as string[]).includes(appointmentId);
 }

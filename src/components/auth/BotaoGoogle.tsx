@@ -48,13 +48,17 @@ function Interno({ rotulo }: { rotulo: string }) {
 export function BotaoGoogle({
   rotulo = "Continuar com o Google",
   proximo,
+  lado = "cliente",
 }: {
   rotulo?: string;
   proximo?: string;
+  /** A porta de onde veio — viaja até o /callback (src/lib/lado.ts). */
+  lado?: "cliente" | "barbearia";
 }) {
   return (
     <form action={entrarComGoogle}>
       {proximo ? <input type="hidden" name="proximo" value={proximo} /> : null}
+      <input type="hidden" name="lado" value={lado} />
       <Interno rotulo={rotulo} />
     </form>
   );
