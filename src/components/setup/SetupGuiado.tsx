@@ -1098,7 +1098,7 @@ function opcoes(atual: string, valores: number[], rotulo: (v: number) => string)
    Pronto
    ========================================================================== */
 
-function Pronto({
+export function Pronto({
   slug,
   urlPublica,
   noAr,

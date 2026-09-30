@@ -92,9 +92,10 @@ O que **não** existe neste projeto, e que é fácil assumir por engano:
   `whatsapp_messages` (§9) e `email_messages` (§15), com o mesmo desenho. O "worker" é um Route Handler chamado
   pelo `pg_cron` (§7). Não crie outra infraestrutura de fila — estenda esse
   desenho.
-- **Sem framework de teste.** Não há Jest, Vitest nem Playwright. `npm run
-  typecheck` e `npm run lint` são a única verificação automática. Critério de
-  aceite de agente, portanto, é **checklist manual**, não suíte verde.
+- **Sem teste unitário.** Não há Jest nem Vitest. Há **testes E2E com
+  Playwright** (`e2e/`, desde 2026-09-30) contra um Supabase LOCAL no Docker —
+  ver `docs/e2e.md`. Critério de aceite: `npm run typecheck`, `npm run lint` e
+  `npm run e2e` verdes; o que a bateria ainda não cobre, checklist manual.
 - **Sem migração automática.** Nada de `prisma migrate`. Ver §4.
 
 ### Scripts
@@ -109,6 +110,7 @@ node supabase/aplicar-sql.mjs --tipos                   # regera database.types.
 npm run build
 npm run typecheck            # tsc --noEmit
 npm run lint
+npx supabase start && npm run e2e   # testes E2E (docs/e2e.md); app de teste em :3100
 node --no-warnings scripts/whatsapp-templates.mjs --ver|--enviar|--listar   # templates na Meta
 ```
 
@@ -574,7 +576,8 @@ Classificação de erro (transitório ou não) em `classificarErro()`,
 
 ## 11. Dívidas técnicas conhecidas
 
-- Sem nenhum teste automatizado. Qualquer regressão só aparece em uso.
+- Testes E2E só na fase 1 (login, cliente, setup, assinatura — `docs/e2e.md`).
+  O painel do dia a dia, a segurança por papel e o /admin ainda não têm teste.
 - `AUDITORIA_BUGS.md` e `AUDITORIA_SEGURANCA.md` listam achados; conferir se o
   item em que você vai mexer já está catalogado antes de "descobrir" de novo.
 - `database.types.ts` é gerado à mão pelo painel do Supabase — fácil de esquecer.
@@ -636,6 +639,11 @@ Criadas pelo agente 02:
   manda para `/configurar` (6 etapas em `components/setup/SetupGuiado.tsx`:
   sua barbearia, onde fica, horário, serviços, quem atende, regras de
   agendamento). Agenda nasce aberta por 15 dias (27).
+- O fim do setup vai por **redirect** para `/configurar/pronto` ("Sua barbearia
+  está no ar!", com o link e o "divulgar no WhatsApp"). Mostrar a tela pelo
+  estado do cliente não funciona: o revalidate da action re-renderiza
+  `/configurar`, que manda para `/painel` — a tela nunca aparecia (achado pelo
+  E2E em 2026-09-30).
 - **Só `concluir_setup_barbearia(shop)` publica a loja:** confere dono, mapa,
   um dia aberto, um serviço e um profissional ativos. Loja com `blocked_at`
   termina o setup mas continua escondida.
