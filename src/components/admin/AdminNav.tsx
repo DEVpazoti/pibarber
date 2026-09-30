@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutDashboard, LogOut, MessageSquare, Store } from "lucide-react";
+import { LayoutDashboard, LogOut, Mail, MessageSquare, Store } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -18,6 +18,7 @@ const ITENS = [
   { href: "/admin", rotulo: "Visão geral", Icone: LayoutDashboard, exato: true },
   { href: "/admin/barbearias", rotulo: "Barbearias", Icone: Store, exato: false },
   { href: "/admin/feedbacks", rotulo: "Relatos", Icone: MessageSquare, exato: false },
+  { href: "/admin/emails", rotulo: "E-mails", Icone: Mail, exato: false },
 ] as const;
 
 export function AdminNav({ nome, relatosNovos }: { nome: string; relatosNovos: number }) {
@@ -97,7 +98,7 @@ export function AdminNav({ nome, relatosNovos }: { nome: string; relatosNovos: n
       </header>
 
       {/* ---------- Celular: barra de baixo ---------- */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-3 border-t border-line bg-surface pb-safe lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-line bg-surface pb-safe lg:hidden">
         {ITENS.map(({ href, rotulo, Icone, exato }) => (
           <Link
             key={href}

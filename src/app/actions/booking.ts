@@ -9,6 +9,7 @@ import { tagBarbearia } from "@/lib/queries/barbearia";
 import { createClient } from "@/lib/supabase/server";
 import { falha, sucesso, type ActionResult, type BarbeariaEncontrada } from "@/lib/types";
 import { timestampSP } from "@/lib/utils";
+import { avisarPorEmail } from "@/lib/email/avisos";
 import { avisarPorWhatsapp } from "@/lib/whatsapp/avisos";
 
 /**
@@ -213,10 +214,10 @@ export async function agendar(entrada: {
     if (error) return falha(traduzirErroBanco(error, "[agendar] book_appointment"));
     if (!data) return falha("Não consegui concluir o agendamento.");
 
-    // Efeito colateral, não parte do agendamento: `avisarPorWhatsapp` tem o
-    // próprio try/catch que só loga e NUNCA lança — Meta fora do ar não
-    // desfaz o "Agendamento confirmado!". Ver src/lib/whatsapp/avisos.ts.
-    await avisarPorWhatsapp("confirmation", { appointmentId: data });
+    // Efeito colateral, não parte do agendamento: `avisarPorEmail` só loga e
+    // NUNCA lança. Sem confirmação por WhatsApp — ela saiu em 2026-09-30; no
+    // WhatsApp ficam o lembrete e o cancelamento (src/lib/whatsapp/catalogo.ts).
+    await avisarPorEmail("agendado", { appointmentId: data });
 
     revalidatePath("/app");
     revalidatePath("/app/agendamentos");
@@ -401,6 +402,7 @@ export async function cancelarMeuAgendamento(
 
     // Antes do revalidate, e sem poder falhar — ver avisos.ts.
     await avisarPorWhatsapp("cancellation", { appointmentId });
+    await avisarPorEmail("cancelado_pelo_cliente", { appointmentId });
 
     revalidatePath("/app/agendamentos");
     revalidatePath("/app");

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect, unstable_rethrow } from "next/navigation";
 
-import { ROTA_EMAIL_CONFIRMADO } from "@/lib/auth";
+import { ROTA_EMAIL_CONFIRMADO, ROTA_REDEFINIR_SENHA } from "@/lib/auth";
 import { casaDoLado, COOKIE_LADO, OPCOES_COOKIE_LADO, type Lado } from "@/lib/lado";
 import { urlDoSite } from "@/lib/env";
 import { criarBarbeariaDoDono, telefoneDeOutroDono } from "@/lib/nova-barbearia";
@@ -421,6 +421,101 @@ export async function entrarComGoogle(formData: FormData): Promise<void> {
 /* ==========================================================================
    Sair
    ========================================================================== */
+
+/* ==========================================================================
+   Esqueci minha senha
+   ========================================================================== */
+
+/**
+ * Manda o link de redefinir a senha. O e-mail sai pelo Supabase Auth (com o
+ * Resend como SMTP — docs/emails.md) e o link cai em /callback, que troca por
+ * sessão e leva a /redefinir-senha.
+ *
+ * A resposta é a MESMA exista ou não a conta: dizer "não há conta com este
+ * e-mail" entregaria a quem testa quais e-mails são clientes do PiBarber.
+ */
+export async function pedirNovaSenha(entrada: {
+  email: string;
+  lado?: Lado;
+}): Promise<ActionResult> {
+  try {
+    const email = entrada.email.trim().toLowerCase();
+    if (!emailValido(email)) return falha("Digite um e-mail válido.", "email");
+
+    const lado: Lado = entrada.lado === "barbearia" ? "barbearia" : "cliente";
+    const supabase = await createClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${urlDoSite()}/callback?lado=${lado}&proximo=${encodeURIComponent(ROTA_REDEFINIR_SENHA)}`,
+    });
+
+    if (error) {
+      const m = error.message.toLowerCase();
+      if (m.includes("rate limit") || m.includes("too many") || error.status === 429) {
+        return falha("Já mandamos um link há pouco. Espere um minuto e tente de novo.");
+      }
+      // Qualquer outro erro é nosso (SMTP fora, configuração). Log, e a mesma
+      // resposta neutra — sem revelar nada sobre a conta.
+      console.error("[auth] falha ao pedir nova senha:", error);
+    }
+
+    return sucesso(
+      undefined,
+      "Se houver uma conta com este e-mail, o link para criar uma nova senha chega em instantes. Confira também o spam.",
+    );
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error("[auth] erro inesperado em pedirNovaSenha:", error);
+    return falha("Não consegui enviar agora. Tente de novo em instantes.");
+  }
+}
+
+/**
+ * Grava a nova senha. Só funciona com a sessão que o link do e-mail abriu —
+ * sem ela, `updateUser` recusa e a tela manda pedir outro link.
+ */
+export async function redefinirSenha(entrada: {
+  senha: string;
+  confirmacao: string;
+}): Promise<ActionResult> {
+  try {
+    if (entrada.senha.length < 6) {
+      return falha("A senha precisa ter pelo menos 6 caracteres.", "senha");
+    }
+    if (entrada.senha !== entrada.confirmacao) {
+      return falha("A confirmação não bate com a senha.", "confirmacao");
+    }
+
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return falha("O link expirou. Peça um novo em “Esqueci minha senha”.");
+    }
+
+    const { error } = await supabase.auth.updateUser({ password: entrada.senha });
+    if (error) {
+      const { texto, campo } = traduzirErroAuth(error.message);
+      return falha(texto, campo);
+    }
+
+    const { data: perfil } = await supabase
+      .from("profiles")
+      .select("role, is_platform_admin")
+      .eq("id", user.id)
+      .maybeSingle();
+    const temBarbearia = perfil?.role === "owner" || perfil?.role === "assistant";
+    const lado =
+      (await cookies()).get(COOKIE_LADO)?.value === "barbearia" ? "barbearia" : "cliente";
+
+    revalidatePath("/", "layout");
+    redirect(perfil?.is_platform_admin ? "/admin" : casaDoLado(lado, temBarbearia));
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error("[auth] erro inesperado em redefinirSenha:", error);
+    return falha("Não consegui trocar a senha. Tente de novo.");
+  }
+}
 
 export async function sair(): Promise<void> {
   // O lado da sessão sai junto: a próxima porta escolhe de novo.

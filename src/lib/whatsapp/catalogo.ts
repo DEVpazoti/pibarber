@@ -37,8 +37,16 @@
 
 export type EventoWhatsapp = "confirmation" | "reminder" | "cancellation";
 
-/** A ordem em que aparecem na tela. */
-export const EVENTOS: readonly EventoWhatsapp[] = ["confirmation", "reminder", "cancellation"];
+/**
+ * As mensagens EM USO, na ordem da tela.
+ *
+ * A confirmação saiu em 2026-09-30 (decisão do negócio): o cliente já vê o
+ * "Agendado!" na tela e recebe a confirmação por e-mail; no WhatsApp ficam só
+ * o lembrete e o cancelamento. O texto dela continua em `CATALOGO` porque o
+ * template já foi submetido à Meta e o evento existe no enum do banco — mas
+ * nada o enfileira, e ele não aparece no painel nem no script de templates.
+ */
+export const EVENTOS: readonly EventoWhatsapp[] = ["reminder", "cancellation"];
 
 /** Os pedaços de informação que um template pode pedir. */
 export type CampoMensagem = "nome" | "barbearia" | "data" | "hora" | "profissional" | "link";
