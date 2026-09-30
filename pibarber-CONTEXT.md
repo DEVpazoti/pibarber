@@ -573,7 +573,7 @@ Classificação de erro (transitório ou não) em `classificarErro()`,
 | # | Agente | Status |
 |---|---|---|
 | 01 | WhatsApp oficial (Meta Cloud API): outbox, templates, webhook, cron | ✅ código entregue — ativação em produção pendente (ver abaixo) |
-| 02 | Setup guiado, assinaturas (Asaas), super admin, relatos, duas portas de login | ✅ entregue na `feat/setup-barbearia` — migrações 28–30 pendentes em produção (ver abaixo) |
+| 02 | Setup guiado, assinaturas (Asaas), super admin, relatos, duas portas de login | ✅ entregue na `feat/setup-barbearia` — migrações até a 32 em produção |
 | 02b | E-mails com Resend: avisos ao dono e ao cliente, lembrete de voltar, "Esqueci minha senha" | ✅ código e migração 31 no dev — falta domínio/chave do Resend, SMTP no Supabase e o cron (§15) |
 
 > Cada agente acrescenta a própria linha aqui e um bloco "O que o agente N
@@ -837,7 +837,7 @@ relatos, ajustes da assinatura) e o commit das duas portas de login
 | Migração | Dev | Produção |
 |---|---|---|
 | 25, 26, 27 | ✅ | ✅ |
-| 28, 29, 30 | ✅ | ⏳ aplicar ANTES do deploy do código que as usa |
+| 28 a 32 | ✅ | ✅ (aplicadas em 2026-09-30, antes do deploy) |
 
 ### O que se descobriu
 
