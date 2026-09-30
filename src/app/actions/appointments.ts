@@ -8,6 +8,7 @@ import { traduzirErroBanco, traduzirErroDesconhecido } from "@/lib/erros";
 import { createClient } from "@/lib/supabase/server";
 import { falha, sucesso, type ActionResult, type PaymentMethod } from "@/lib/types";
 import { timestampSP } from "@/lib/utils";
+import { avisarPorEmail } from "@/lib/email/avisos";
 import { avisarPorWhatsapp } from "@/lib/whatsapp/avisos";
 
 /**
@@ -141,9 +142,7 @@ export type ConclusaoAtendimento = {
  * confere é a função do banco, ANTES de escrever qualquer coisa — a tela
  * também confere, mas só para não deixar o botão habilitado à toa.
  */
-export async function concluirAgendamento(
-  entrada: ConclusaoAtendimento,
-): Promise<ActionResult> {
+export async function concluirAgendamento(entrada: ConclusaoAtendimento): Promise<ActionResult> {
   try {
     await requireShopContext();
 
@@ -208,6 +207,7 @@ export async function cancelarAgendamento(
     // falha de WhatsApp não pode transformar um cancelamento feito em erro na
     // tela do barbeiro. Ver src/lib/whatsapp/avisos.ts.
     await avisarPorWhatsapp("cancellation", { appointmentId });
+    await avisarPorEmail("cancelado_pela_loja", { appointmentId });
 
     revalidarAgenda();
     return sucesso(undefined, "Agendamento cancelado.");

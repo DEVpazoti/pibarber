@@ -20,6 +20,10 @@ function hostDoSupabase(): string | null {
 const host = hostDoSupabase();
 
 const nextConfig: NextConfig = {
+  // O servidor dos testes E2E (playwright.config.ts) roda ao lado do
+  // `npm run dev` e precisa de uma pasta de build própria: dois `next dev` na
+  // mesma `.next` se atropelam.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   images: {
     remotePatterns: [
       // O nosso Storage, declarado explicitamente. Vem primeiro porque é o

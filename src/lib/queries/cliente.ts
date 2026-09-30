@@ -64,19 +64,31 @@ function normalizar(linha: LinhaMeuAgendamento): MeuAgendamento {
  * É a prova de que o PiBarber é um marketplace: a mesma lista mistura lojas
  * diferentes, e é por isso que a tela tem filtro por estabelecimento.
  */
-export async function carregarMeusAgendamentos(
-  opcoes?: { de?: string; ate?: string; termo?: string; limite?: number },
-): Promise<MeuAgendamento[]> {
+export async function carregarMeusAgendamentos(opcoes?: {
+  de?: string;
+  ate?: string;
+  termo?: string;
+  limite?: number;
+}): Promise<MeuAgendamento[]> {
   try {
     const supabase = await createClient();
 
-    // Sem filtro por cliente, e é de propósito: a policy `appointments_select`
-    // usa `owns_customer(customer_id)`, então o Postgres já devolve só os
-    // agendamentos desta pessoa. Filtrar aqui exigiria ler `customers` — o que
-    // o cliente NÃO pode fazer, senão leria junto o `notes` do barbeiro.
+    // FILTRO EXPLÍCITO pela pessoa, e não só a RLS: quem tem barbearia também
+    // é cliente, e a RLS deixa o dono ver a agenda INTEIRA da loja dele — que
+    // apareceria aqui como se fosse dele. `meus_agendamentos_ids()`
+    // (30_lado_cliente.sql) aplica a regra de "meu, como cliente" no banco,
+    // sem o app precisar ler `customers` (que tem o `notes` do barbeiro).
+    const { data: ids, error: erroIds } = await supabase.rpc("meus_agendamentos_ids");
+    if (erroIds) {
+      console.error("[app] falha ao buscar os meus agendamentos:", erroIds);
+      return [];
+    }
+    if (!ids || ids.length === 0) return [];
+
     let consulta = supabase
       .from("appointments")
       .select(SELECT_MEUS)
+      .in("id", ids as string[])
       .order("starts_at", { ascending: false })
       .limit(opcoes?.limite ?? 200);
 

@@ -2,6 +2,8 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 import type { Database } from "@/lib/database.types";
+import { COOKIE_LADO, ladoDaSessao } from "@/lib/lado";
+import { COOKIE_VISUALIZACAO, lojaDoCookie } from "@/lib/visualizacao";
 
 /**
  * Middleware — a SEGUNDA das três camadas de permissão.
@@ -76,6 +78,9 @@ export async function middleware(request: NextRequest) {
       destino.pathname = "/entrar";
       // Guarda para onde a pessoa queria ir, e devolve para lá depois do login.
       destino.searchParams.set("proximo", caminho);
+      // A porta certa: painel, setup, assinatura e admin são da barbearia;
+      // o app é do cliente (src/lib/lado.ts).
+      if (!comecaCom(caminho, PREFIXOS_APP)) destino.searchParams.set("tipo", "barbearia");
       return NextResponse.redirect(destino);
     }
     return resposta;
@@ -100,11 +105,15 @@ export async function middleware(request: NextRequest) {
   const papel = perfil?.role ?? "client";
   const ehAdmin = perfil?.is_platform_admin ?? false;
 
-  const casa = ehAdmin
-    ? "/admin"
-    : papel === "owner" || papel === "assistant"
-      ? "/painel"
-      : "/app";
+  // O lado da sessão foi escolhido pela porta do login (src/lib/lado.ts).
+  // Quem tem barbearia pode estar de qualquer lado; quem é só cliente, só do
+  // lado de cliente — o cookie escolhe a ÁREA, não dá permissão.
+  const temBarbearia = papel === "owner" || papel === "assistant";
+  const lado = temBarbearia
+    ? ladoDaSessao(request.cookies.get(COOKIE_LADO)?.value, true)
+    : "cliente";
+
+  const casa = ehAdmin ? "/admin" : lado === "barbearia" ? "/painel" : "/app";
 
   // Quem já está logado não fica olhando tela de login.
   if (ROTAS_AUTENTICACAO.includes(caminho)) {
@@ -115,12 +124,21 @@ export async function middleware(request: NextRequest) {
   }
 
   // --- Cada prefixo com o seu papel ----------------------------------------
-  const podeApp = papel === "client";
-  const podePainel = papel === "owner" || papel === "assistant";
+  const podeApp = lado === "cliente";
+  const podePainel = temBarbearia && lado === "barbearia";
+
+  // "Ver como o dono": o admin entra no /painel (e só nele — não no setup nem
+  // na assinatura, que são do dono) quando o cookie de visualização existe.
+  // Quem confere de verdade é `requireShopContext()`, que só aceita o cookie
+  // de admin e recusa toda ação nesse modo.
+  const visualizando =
+    ehAdmin &&
+    comecaCom(caminho, ["/painel"]) &&
+    lojaDoCookie(request.cookies.get(COOKIE_VISUALIZACAO)?.value) !== null;
 
   const negado =
     (comecaCom(caminho, PREFIXOS_APP) && !podeApp) ||
-    (comecaCom(caminho, PREFIXOS_PAINEL) && !podePainel) ||
+    (comecaCom(caminho, PREFIXOS_PAINEL) && !podePainel && !visualizando) ||
     (comecaCom(caminho, PREFIXOS_ADMIN) && !ehAdmin);
 
   if (negado) {
@@ -146,7 +164,9 @@ export const config = {
      *                                pagaria um getUser() de ida e volta ao
      *                                Supabase à toa — e o webhook da Meta
      *                                tem prazo curto para receber o 200.
+     *   api/emails                 → descadastro de um clique, chamado pelo
+     *                                Gmail sem sessão.
      */
-    "/((?!_next/static|_next/image|api/webhooks|api/cron|favicon.ico|manifest.webmanifest|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|api/webhooks|api/cron|api/emails|favicon.ico|manifest.webmanifest|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

@@ -12,7 +12,7 @@ import { carregarPainelWhatsapp } from "@/lib/whatsapp/painel";
 export const metadata: Metadata = { title: "Configurações" };
 
 export default async function ConfiguracoesPage() {
-  const { shopId } = await requireOwnerContext();
+  const { shopId, profile } = await requireOwnerContext();
 
   const supabase = await createClient();
 
@@ -71,11 +71,15 @@ export default async function ConfiguracoesPage() {
   // ou sem credencial, o bloco aparece sem histórico.
   const whatsapp = await carregarPainelWhatsapp(loja);
 
+  // O intervalo do e-mail de volta é da plataforma (o /admin muda).
+  const { data: diasVolta, error: erroDias } = await supabase.rpc("recorrencia_dias");
+  if (erroDias) console.error("[configurações] falha ao ler recorrencia_dias:", erroDias);
+
   return (
     <>
       <PageHeader
         titulo="Configurações"
-        descricao="Os dados da barbearia, o link público, o horário de funcionamento e as mensagens de WhatsApp."
+        descricao="Os dados da barbearia, o link público, o horário de funcionamento, as mensagens de WhatsApp e os e-mails."
       />
 
       <ConfiguracoesPainel
@@ -85,6 +89,8 @@ export default async function ConfiguracoesPage() {
         catalogoBeneficios={catalogo}
         beneficiosMarcados={beneficiosMarcados}
         whatsapp={whatsapp}
+        diasVolta={diasVolta ?? 21}
+        emailDono={profile.email ?? null}
       />
     </>
   );

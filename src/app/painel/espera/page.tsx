@@ -38,7 +38,6 @@ async function carregar(shopId: string): Promise<EsperaNoPainel[]> {
       .from("waitlist_entries")
       .select(
         `id, desired_date, period, status, created_at,
-         pessoa:profiles!waitlist_entries_profile_id_fkey(full_name, phone),
          profissional:professionals!waitlist_entries_professional_id_fkey(name, nickname),
          servico:services!waitlist_entries_service_id_fkey(name)`,
       )
@@ -54,6 +53,16 @@ async function carregar(shopId: string): Promise<EsperaNoPainel[]> {
       return [];
     }
 
+    // Nome e celular vêm por função, não por embed em `profiles`: a policy de
+    // lá só libera o próprio perfil, e o embed voltava nulo — toda linha virava
+    // "Cliente", sem telefone (32_lista_espera_contato.sql).
+    const { data: contatos, error: erroContatos } = await supabase.rpc(
+      "contatos_da_lista_de_espera",
+      { p_shop: shopId },
+    );
+    if (erroContatos) console.error("[espera] falha ao ler os contatos:", erroContatos);
+    const contatoDe = new Map((contatos ?? []).map((c) => [c.entry_id, c]));
+
     return (data ?? []).map((e) => {
       const prof = one(e.profissional);
       return {
@@ -62,7 +71,12 @@ async function carregar(shopId: string): Promise<EsperaNoPainel[]> {
         period: e.period,
         status: e.status,
         created_at: e.created_at,
-        pessoa: one(e.pessoa),
+        pessoa: contatoDe.has(e.id)
+          ? {
+              full_name: contatoDe.get(e.id)!.full_name,
+              phone: contatoDe.get(e.id)!.phone,
+            }
+          : null,
         profissional: prof ? (prof.nickname ?? prof.name) : null,
         servico: one(e.servico)?.name ?? null,
       };

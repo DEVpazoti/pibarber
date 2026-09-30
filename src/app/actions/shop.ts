@@ -66,8 +66,10 @@ export async function salvarBarbearia(dados: DadosBarbearia): Promise<ActionResu
       return falha("O link só aceita letras minúsculas, números e hífen — de 3 a 60.");
     }
     if (dados.antecedenciaMinima < 0) return falha("A antecedência mínima não pode ser negativa.");
-    if (dados.antecedenciaMaximaDias < 1) return falha("A antecedência máxima precisa ser de pelo menos 1 dia.");
-    if (dados.prazoCancelamentoHoras < 0) return falha("O prazo de cancelamento não pode ser negativo.");
+    if (dados.antecedenciaMaximaDias < 1)
+      return falha("A antecedência máxima precisa ser de pelo menos 1 dia.");
+    if (dados.prazoCancelamentoHoras < 0)
+      return falha("O prazo de cancelamento não pode ser negativo.");
 
     // A coordenada não é mais digitada (T-4): ela vem do geocoding, do GPS ou do
     // pin do mapa. Mesmo assim é validada aqui, porque a RLS deixa o dono dar
@@ -132,7 +134,6 @@ export async function salvarBarbearia(dados: DadosBarbearia): Promise<ActionResu
    ========================================================================== */
 
 export type AvisosWhatsappLigados = {
-  confirmation: boolean;
   reminder: boolean;
   cancellation: boolean;
 };
@@ -157,19 +158,56 @@ export async function salvarAvisosWhatsapp(ligados: AvisosWhatsappLigados): Prom
       .from("barbershops")
       .update({
         // `=== true`: o valor chega do navegador, e só um booleano de verdade liga.
-        whatsapp_confirmation_enabled: ligados.confirmation === true,
         whatsapp_reminder_enabled: ligados.reminder === true,
         whatsapp_cancellation_enabled: ligados.cancellation === true,
       })
       .eq("id", shopId);
 
-    if (error) return falha(traduzirErroBanco(error, "[configurações] salvar mensagens de WhatsApp"));
+    if (error)
+      return falha(traduzirErroBanco(error, "[configurações] salvar mensagens de WhatsApp"));
 
     revalidatePath("/painel/configuracoes");
     return sucesso(undefined, "Mensagens salvas.");
   } catch (error) {
     unstable_rethrow(error);
     return falha(traduzirErroDesconhecido(error, "[configurações] salvarAvisosWhatsapp"));
+  }
+}
+
+/* ==========================================================================
+   E-mails (31_emails.sql)
+   ========================================================================== */
+
+export type AvisosEmailLigados = {
+  /** Aviso ao dono de agendamento novo feito pelo cliente. */
+  novo: boolean;
+  /** Aviso ao dono de cancelamento feito pelo cliente. */
+  cancelado: boolean;
+  /** O e-mail de volta ("bora voltar?") para os clientes. É marketing. */
+  volta: boolean;
+};
+
+export async function salvarAvisosEmail(ligados: AvisosEmailLigados): Promise<ActionResult> {
+  try {
+    const { shopId } = await requireOwnerContext();
+    const supabase = await createClient();
+
+    const { error } = await supabase
+      .from("barbershops")
+      .update({
+        email_booking_enabled: ligados.novo === true,
+        email_cancellation_enabled: ligados.cancelado === true,
+        email_marketing_enabled: ligados.volta === true,
+      })
+      .eq("id", shopId);
+
+    if (error) return falha(traduzirErroBanco(error, "[configurações] salvar e-mails"));
+
+    revalidatePath("/painel/configuracoes");
+    return sucesso(undefined, "E-mails salvos.");
+  } catch (error) {
+    unstable_rethrow(error);
+    return falha(traduzirErroDesconhecido(error, "[configurações] salvarAvisosEmail"));
   }
 }
 

@@ -1,10 +1,12 @@
 "use client";
 
 import { Eye, EyeOff } from "lucide-react";
+import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 
 import { entrar } from "@/app/actions/auth";
 import { Button, Field, Input } from "@/components/ui";
+import type { Lado } from "@/lib/lado";
 
 /**
  * ENTRAR — campos controlados, pelo mesmo motivo do FormCriarConta.
@@ -20,7 +22,16 @@ import { Button, Field, Input } from "@/components/ui";
 type Campo = "email" | "senha";
 type Erros = Partial<Record<Campo, string>>;
 
-export function FormEntrar({ proximo, erroInicial }: { proximo?: string; erroInicial?: string }) {
+export function FormEntrar({
+  proximo,
+  erroInicial,
+  lado = "cliente",
+}: {
+  proximo?: string;
+  erroInicial?: string;
+  /** A porta: decide o lado da sessão (src/lib/lado.ts). */
+  lado?: Lado;
+}) {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
 
@@ -55,7 +66,7 @@ export function FormEntrar({ proximo, erroInicial }: { proximo?: string; erroIni
     setErros({});
 
     iniciar(async () => {
-      const resultado = await entrar({ email, senha, proximo });
+      const resultado = await entrar({ email, senha, proximo, lado });
 
       // Só chega aqui em caso de erro — o sucesso sai da página por redirect().
       emVoo.current = false;
@@ -137,6 +148,13 @@ export function FormEntrar({ proximo, erroInicial }: { proximo?: string; erroIni
           }
         />
       </Field>
+
+      <Link
+        href={lado === "barbearia" ? "/esqueci-senha?tipo=barbearia" : "/esqueci-senha"}
+        className="-mt-2 self-end text-sm font-medium text-brass hover:text-brass-deep"
+      >
+        Esqueci minha senha
+      </Link>
 
       <Button type="submit" tamanho="lg" larguraTotal carregando={enviando}>
         Entrar

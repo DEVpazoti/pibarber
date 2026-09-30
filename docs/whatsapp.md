@@ -67,7 +67,7 @@ no painel da Meta (§2), e o `CRON_SECRET` vai também no Supabase (§6).
 Depois de salvar as variáveis na Vercel, **faça um redeploy**. A variável nova
 não vale para o deploy que já está no ar.
 
-Confira também `NEXT_PUBLIC_SITE_URL=https://pibarber.vercel.app`. É dela que
+Confira também `NEXT_PUBLIC_SITE_URL=https://pibarber.app`. É dela que
 sai o link dentro de cada mensagem. Sem ela, o cliente recebe um link para
 `localhost`.
 
@@ -83,7 +83,7 @@ O webhook é por onde a Meta avisa três coisas:
 1. developers.facebook.com → **Meus apps** → o app do PiBarber.
 2. Menu **WhatsApp → Configuração**. No "Início rápido", é a **Etapa 2 → Configurar webhooks**.
 3. Em **Webhook**, clique em **Editar** e preencha:
-   - **URL de retorno de chamada:** `https://pibarber.vercel.app/api/webhooks/whatsapp`
+   - **URL de retorno de chamada:** `https://pibarber.app/api/webhooks/whatsapp`
    - **Verificar token:** o mesmo valor de `WHATSAPP_WEBHOOK_VERIFY_TOKEN`
 4. Clique em **Verificar e salvar**. A Meta faz um `GET` na URL, e o PiBarber
    devolve o desafio.
@@ -197,19 +197,19 @@ exemplos.
 ```
 Olá {{1}}! Seu horário na {{2}} está confirmado para {{3}} às {{4}} com {{5}}. Acompanhe ou cancele em {{6}} quando precisar.
 ```
-Exemplos: `João` · `Barbearia do Zé` · `sexta, 18/09` · `14:30` · `Carlos` · `https://pibarber.vercel.app/app/agendamentos`
+Exemplos: `João` · `Barbearia do Zé` · `sexta, 18/09` · `14:30` · `Carlos` · `https://pibarber.app/app/agendamentos`
 
 **`pibarber_lembrete_v2`**
 ```
 Olá {{1}}! Lembrete: você tem horário {{2}} na {{3}}, às {{4}}, com {{5}}. Se não puder vir, cancele em {{6}} para liberar o horário.
 ```
-Exemplos: `João` · `amanhã` · `Barbearia do Zé` · `14:30` · `Carlos` · `https://pibarber.vercel.app/app/agendamentos`
+Exemplos: `João` · `Barbearia do Zé` · `14:30` · `Carlos` · `https://pibarber.app/app/agendamentos`
 
 **`pibarber_cancelamento_v1`**
 ```
 Olá {{1}}! Seu horário na {{2}} em {{3}} às {{4}} foi cancelado. Marque outro em {{5}} quando quiser.
 ```
-Exemplos: `João` · `Barbearia do Zé` · `sexta, 18/09` · `14:30` · `https://pibarber.vercel.app/b/barbearia-do-ze`
+Exemplos: `João` · `Barbearia do Zé` · `sexta, 18/09` · `14:30` · `https://pibarber.app/b/barbearia-do-ze`
 
 ### Depois de submeter
 
@@ -259,7 +259,7 @@ que falhou por instabilidade da Meta só é retentada pelo cron.
      '*/5 * * * *',
      $job$
        select net.http_post(
-         url     := 'https://pibarber.vercel.app/api/cron/whatsapp',
+         url     := 'https://pibarber.app/api/cron/whatsapp',
          headers := jsonb_build_object(
            'Content-Type',  'application/json',
            'Authorization', 'Bearer ' || (

@@ -10,7 +10,7 @@ import type { Dependent } from "@/lib/types";
 export const metadata: Metadata = { title: "Quem eu agendo" };
 
 export default async function PessoasPage() {
-  const perfil = await requireRole(["client"]);
+  const perfil = await requireRole(["client", "owner", "assistant"]);
 
   let dependentes: Dependent[] = [];
 

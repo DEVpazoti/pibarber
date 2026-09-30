@@ -301,7 +301,7 @@ async function viaOpenStreetMap(partes: PartesDoEndereco): Promise<ResultadoGeoc
         headers: {
           Accept: "application/json",
           // Obrigatório pela política de uso. Sem ele, o Nominatim bloqueia.
-          "User-Agent": "PiBarber/1.0 (+https://pibarber.vercel.app)",
+          "User-Agent": "PiBarber/1.0 (+https://pibarber.app)",
         },
         signal: AbortSignal.timeout(8000),
         cache: "no-store",

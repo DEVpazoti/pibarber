@@ -7,7 +7,7 @@ import { carregarMeusAgendamentos } from "@/lib/queries/cliente";
 export const metadata: Metadata = { title: "Meus Agendamentos" };
 
 export default async function AgendamentosPage() {
-  await requireRole(["client"]);
+  await requireRole(["client", "owner", "assistant"]);
 
   const agendamentos = await carregarMeusAgendamentos();
 

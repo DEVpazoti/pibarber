@@ -10,7 +10,7 @@ import { hojeISO, one } from "@/lib/utils";
 export const metadata: Metadata = { title: "Lista de espera" };
 
 export default async function EsperaPage() {
-  const perfil = await requireRole(["client"]);
+  const perfil = await requireRole(["client", "owner", "assistant"]);
 
   let entradas: EsperaDoCliente[] = [];
 

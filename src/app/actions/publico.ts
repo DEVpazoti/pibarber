@@ -11,6 +11,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { erroDeTelefone, normalizarTelefone } from "@/lib/telefone";
 import { falha, sucesso, type ActionResult } from "@/lib/types";
 import { timestampSP } from "@/lib/utils";
+import { avisarPorEmail } from "@/lib/email/avisos";
 import { avisarPorWhatsapp } from "@/lib/whatsapp/avisos";
 
 /**
@@ -197,9 +198,9 @@ export async function agendarSemLogin(
 
     if (!resposta.token) return falha("Não consegui concluir o agendamento.");
 
-    // A confirmação por WhatsApp, com o link de acompanhamento dentro. Nunca
-    // lança — ver src/lib/whatsapp/avisos.ts.
-    await avisarPorWhatsapp("confirmation", { token: resposta.token });
+    // Confirmação só por e-mail (quem tem): a do WhatsApp saiu em 2026-09-30.
+    // O link de acompanhamento (/a/<token>) está na tela de "Agendado!".
+    await avisarPorEmail("agendado", { token: resposta.token });
 
     // A agenda do painel precisa mostrar o horário novo na hora.
     revalidatePath("/painel");
@@ -245,8 +246,7 @@ export type AgendamentoPorToken = {
  * `/a/qualquer-coisa` viraria uma consulta, e varrer a rota ficaria barato.
  */
 export async function buscarPorToken(token: string): Promise<AgendamentoPorToken | null> {
-  const formatoUUID =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const formatoUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!formatoUUID.test(token)) return null;
 
   try {
@@ -277,10 +277,7 @@ export async function buscarPorToken(token: string): Promise<AgendamentoPorToken
  * conferido no banco. Quem agenda sem cadastro não ganha um prazo melhor por
  * isso, e a barbearia não precisa aprender duas regras.
  */
-export async function cancelarPorToken(
-  token: string,
-  motivo?: string,
-): Promise<ActionResult> {
+export async function cancelarPorToken(token: string, motivo?: string): Promise<ActionResult> {
   try {
     const admin = createAdminClient();
 
@@ -293,6 +290,7 @@ export async function cancelarPorToken(
 
     // Antes do revalidate, e sem poder falhar — ver avisos.ts.
     await avisarPorWhatsapp("cancellation", { token });
+    await avisarPorEmail("cancelado_pelo_cliente", { token });
 
     revalidatePath("/painel");
     revalidatePath("/painel/agenda");

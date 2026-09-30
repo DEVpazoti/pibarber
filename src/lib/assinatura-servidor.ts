@@ -170,3 +170,33 @@ export async function sincronizarComAsaas(origem: {
     console.error("[assinatura] falha ao conferir no Asaas:", error);
   }
 }
+
+/**
+ * A assinatura ou o parcelamento que está valendo JÁ recebeu algum pagamento?
+ *
+ * Separa duas situações que têm o mesmo `status = active`:
+ *   - o plano PAGO e em vigor (não se troca pelo painel);
+ *   - a escolha AGENDADA e ainda não paga, feita por quem tem período pago
+ *     sobrando (renovação do parcelado, ou quem cancelou e voltou). Essa o
+ *     dono pode trocar à vontade até pagar — errar a forma de pagamento e não
+ *     conseguir mudar era um beco sem saída.
+ *
+ * Na dúvida (Asaas fora do ar), responde que SIM: melhor recusar a troca uma
+ * vez do que apagar um plano que o dono pagou.
+ */
+export async function temPagamentoConfirmado(origem: {
+  assinatura?: string | null;
+  parcelamento?: string | null;
+}): Promise<boolean> {
+  try {
+    const cobrancas = origem.assinatura
+      ? await cobrancasDaAssinatura(origem.assinatura)
+      : origem.parcelamento
+        ? await parcelasDoParcelamento(origem.parcelamento)
+        : [];
+    return cobrancas.some((c) => STATUS_PAGO.has(c.status));
+  } catch (error) {
+    console.error("[assinatura] falha ao conferir pagamentos no Asaas:", error);
+    return true;
+  }
+}

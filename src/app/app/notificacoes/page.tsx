@@ -10,7 +10,7 @@ import type { AppNotification } from "@/lib/types";
 export const metadata: Metadata = { title: "Notificações" };
 
 export default async function NotificacoesPage() {
-  const perfil = await requireRole(["client"]);
+  const perfil = await requireRole(["client", "owner", "assistant"]);
 
   let notificacoes: AppNotification[] = [];
 
