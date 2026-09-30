@@ -240,3 +240,42 @@ export function linkDoEmail(html: string): string {
   if (!achado) throw new Error("e-mail sem link");
   return achado[1]!.replace(/&amp;/g, "&");
 }
+
+/* ==========================================================================
+   Agendamentos prontos (para os testes do painel)
+   ========================================================================== */
+
+/** "2026-10-01" — o dia de hoje + `deslocamento`, no fuso de São Paulo. */
+export function diaSP(deslocamento = 0): string {
+  const [linha] = sql<{ dia: string }>(
+    `select ((now() at time zone 'America/Sao_Paulo')::date + ${deslocamento})::text as dia`,
+  );
+  return linha!.dia;
+}
+
+/**
+ * Um atendimento na loja, direto no banco. `dia` é o deslocamento em dias a
+ * partir de hoje (−1 = ontem), `hora` é a de São Paulo. O cliente é uma ficha
+ * da loja (sem conta), com o nome dado — é por ele que o teste acha o
+ * atendimento na tela.
+ */
+export function criarAgendamento(
+  loja: Loja,
+  opcoes: { cliente: string; dia: number; hora: string; status?: string; email?: string },
+): { id: string; customerId: string } {
+  const [ficha] = sql<{ id: string }>(`
+    insert into customers (barbershop_id, full_name, phone, email)
+    values ('${loja.id}', '${opcoes.cliente}', '${celularUnico()}', ${opcoes.email ? `'${opcoes.email}'` : "null"})
+    returning id`);
+  const [ag] = sql<{ id: string }>(`
+    insert into appointments (barbershop_id, professional_id, customer_id, starts_at, ends_at,
+      status, total_price, source)
+    values ('${loja.id}', '${loja.profissionalId}', '${ficha!.id}',
+      ((now() at time zone 'America/Sao_Paulo')::date + ${opcoes.dia} + time '${opcoes.hora}') at time zone 'America/Sao_Paulo',
+      ((now() at time zone 'America/Sao_Paulo')::date + ${opcoes.dia} + time '${opcoes.hora}' + interval '30 minutes') at time zone 'America/Sao_Paulo',
+      '${opcoes.status ?? "scheduled"}', 40, 'manual')
+    returning id`);
+  executar(`insert into appointment_services (appointment_id, service_id, price, duration_minutes)
+            values ('${ag!.id}', '${loja.servicoId}', 40, 30)`);
+  return { id: ag!.id, customerId: ficha!.id };
+}

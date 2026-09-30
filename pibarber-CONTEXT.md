@@ -210,9 +210,10 @@ isolada com o env de produção. **Produção só com autorização explícita.*
 29_admin_dashboard       admin_notes, admin_audit, admin_barbearias(), admin_metricas()
 30_lado_cliente          meus_agendamentos_ids() e client_home com a regra do lado cliente
 31_emails                email_messages, email_opt_outs, platform_settings, interruptores de e-mail
+32_lista_espera_contato  contatos_da_lista_de_espera(): nome e celular da fila para quem é da loja
 ```
 
-**A próxima migração é a `32_`.** Os modelos de e-mail do Supabase Auth ficam
+**A próxima migração é a `33_`.** Os modelos de e-mail do Supabase Auth ficam
 em `supabase/emails/*.html` (colados à mão no painel — `docs/emails.md`). Regras para escrever uma:
 
 - Idempotente de ponta a ponta. `create table if not exists`, `do $$ ... exception
@@ -416,6 +417,13 @@ segundo mecanismo.
 
 Estão detalhadas em `ESPECIFICACAO.md` §10. As que mais mordem:
 
+**Embed em `profiles` volta nulo em silêncio.** A policy `profiles_select` só
+libera o próprio perfil (e os assistentes, para o dono). Um
+`pessoa:profiles!…(full_name, phone)` de OUTRA pessoa não dá erro: devolve
+`null`, e a tela mostra "Cliente". Já mordeu duas vezes — avaliações (10) e
+lista de espera (32). Nome/contato de cliente vem da ficha (`customers`) ou de
+uma função `security definer` com o recorte certo.
+
 **`PGRST201` — relação ambígua.** Quando duas FKs apontam para a mesma tabela,
 o PostgREST não sabe qual você quer no embed. Desambigue nomeando a constraint:
 `profiles!appointments_created_by_fkey(...)`.
@@ -576,8 +584,8 @@ Classificação de erro (transitório ou não) em `classificarErro()`,
 
 ## 11. Dívidas técnicas conhecidas
 
-- Testes E2E só na fase 1 (login, cliente, setup, assinatura — `docs/e2e.md`).
-  O painel do dia a dia, a segurança por papel e o /admin ainda não têm teste.
+- Testes E2E nas fases 1 e 2 (login, cliente, setup, assinatura e o painel do
+  dia a dia — `docs/e2e.md`). A segurança por papel e o /admin ainda não têm teste.
 - `AUDITORIA_BUGS.md` e `AUDITORIA_SEGURANCA.md` listam achados; conferir se o
   item em que você vai mexer já está catalogado antes de "descobrir" de novo.
 - `database.types.ts` é gerado à mão pelo painel do Supabase — fácil de esquecer.
