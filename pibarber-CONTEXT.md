@@ -619,7 +619,7 @@ Criadas pelo agente 01:
   - Cancelar → desfazer → cancelar de novo manda UM aviso de cancelamento só (índice único).
   - Desfazer um cancelamento não reenfileira o lembrete: `reminder_sent_at` já estava preenchido.
   - Status do webhook que chega antes de o envio gravar o `wamid` se perde. É raro; a linha fica `sent`.
-  - Quem agenda depois das 18h da véspera recebe confirmação e lembrete quase juntos. É a regra pedida ("se o instante passou, agora").
+  - ~~Quem agenda depois das 18h da véspera recebe confirmação e lembrete quase juntos.~~ **CORRIGIDO na 25**: virou bug em produção (o lembrete dizia "amanhã" para um atendimento de hoje). Agora esse caso não gera lembrete, e o dia é parâmetro do template.
   - A palavra de saída "cancelar" pode ser escrita por quem queria cancelar o HORÁRIO. A pessoa sai da lista e o horário não é cancelado. Está na lista porque foi pedido; reavaliar com dado de uso.
 
 Criadas pelo agente 02:
