@@ -5,6 +5,7 @@ import { expect, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 
 import {
+  ANON_KEY,
   ASAAS_WEBHOOK_TOKEN,
   BASE_URL,
   CONTAINER_DB,
@@ -278,4 +279,56 @@ export function criarAgendamento(
   executar(`insert into appointment_services (appointment_id, service_id, price, duration_minutes)
             values ('${ag!.id}', '${loja.servicoId}', 40, 30)`);
   return { id: ag!.id, customerId: ficha!.id };
+}
+
+/* ==========================================================================
+   Papéis e acesso direto à API (fase 3 — segurança)
+   ========================================================================== */
+
+/** Um assistente da loja: vê a agenda, não vê dinheiro (src/components/painel/menu.ts). */
+export async function criarAssistente(loja: Loja, nome = "Assistente E2E"): Promise<Conta> {
+  const conta = await criarCliente(nome);
+  executar(
+    `update profiles set role = 'assistant', barbershop_id = '${loja.id}' where id = '${conta.id}'`,
+  );
+  return conta;
+}
+
+/** Um admin da plataforma (o que o 05_criar_admin.sql faz à mão). */
+export async function criarAdmin(): Promise<Conta> {
+  const conta = await criarCliente("Admin E2E");
+  executar(`update profiles set is_platform_admin = true where id = '${conta.id}'`);
+  return conta;
+}
+
+/**
+ * A API do Supabase como ESSA pessoa a veria — a chave pública mais a sessão
+ * dela, sem passar pela tela. É o que alguém curioso faria com o DevTools
+ * aberto: a RLS é a única coisa entre ele e os dados (CONTEXT §5).
+ */
+export async function apiComo(email: string) {
+  const cliente = createClient(SUPABASE_URL, ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { error } = await cliente.auth.signInWithPassword({ email, password: SENHA });
+  if (error) throw new Error(`apiComo(${email}): ${error.message}`);
+  return cliente;
+}
+
+/** A API sem login nenhum — só a chave pública, que está no site para todos. */
+export function apiAnonima() {
+  return createClient(SUPABASE_URL, ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+/** Um atendimento já CONCLUÍDO, com o lançamento no caixa e a comissão. */
+export function criarAtendimentoConcluido(loja: Loja, cliente: string): string {
+  const ag = criarAgendamento(loja, { cliente, dia: -1, hora: "14:00", status: "completed" });
+  executar(`
+    insert into transactions (barbershop_id, type, amount, payment_method, appointment_id, occurred_at)
+    values ('${loja.id}', 'income', 40, 'pix', '${ag.id}', current_date - 1);
+    insert into commissions (barbershop_id, professional_id, appointment_id, base_amount, percent, amount)
+    values ('${loja.id}', '${loja.profissionalId}', '${ag.id}', 40, 40, 16);`);
+  return ag.id;
 }

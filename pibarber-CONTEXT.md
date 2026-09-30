@@ -584,8 +584,9 @@ Classificação de erro (transitório ou não) em `classificarErro()`,
 
 ## 11. Dívidas técnicas conhecidas
 
-- Testes E2E nas fases 1 e 2 (login, cliente, setup, assinatura e o painel do
-  dia a dia — `docs/e2e.md`). A segurança por papel e o /admin ainda não têm teste.
+- Testes E2E nas fases 1 a 3 (login, cliente, setup, assinatura, painel do dia
+  a dia e segurança por papel, inclusive pela API direto — `docs/e2e.md`). O
+  /admin ainda não tem teste.
 - `AUDITORIA_BUGS.md` e `AUDITORIA_SEGURANCA.md` listam achados; conferir se o
   item em que você vai mexer já está catalogado antes de "descobrir" de novo.
 - `database.types.ts` é gerado à mão pelo painel do Supabase — fácil de esquecer.
