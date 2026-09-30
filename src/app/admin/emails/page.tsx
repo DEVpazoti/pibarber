@@ -62,6 +62,21 @@ export default async function EmailsAdminPage() {
     if (r.error) console.error("[admin emails] falha ao carregar:", r.error);
   }
 
+  // `envEmail()` LANÇA quando a configuração está pela metade (a chave sem o
+  // remetente). Aqui isso não pode derrubar a página — é justamente nela que o
+  // admin descobre o que falta. A mensagem diz o NOME da variável, nunca o valor.
+  let envio: { ligado: true } | { ligado: false; motivo: string };
+  try {
+    envio = envEmail()
+      ? { ligado: true }
+      : { ligado: false, motivo: "Falta a variável RESEND_API_KEY." };
+  } catch (e) {
+    envio = {
+      ligado: false,
+      motivo: e instanceof Error ? e.message : "Configuração de e-mail incompleta.",
+    };
+  }
+
   const porTipo = new Map<string, { sent: number; failed: number; pending: number }>();
   for (const l of fila.data ?? []) {
     const t = porTipo.get(l.kind) ?? { sent: 0, failed: 0, pending: 0 };
@@ -84,10 +99,13 @@ export default async function EmailsAdminPage() {
         descricao="O intervalo do lembrete de voltar e como estão os envios nos últimos 7 dias."
       />
 
-      {!envEmail() ? (
+      {!envio.ligado ? (
         <p className="mb-4 flex items-start gap-2 rounded-card border border-line bg-surface p-3 text-sm text-ink-soft">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-danger" aria-hidden />O envio está
-          desligado neste ambiente (sem RESEND_API_KEY). Nada entra na fila.
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-danger" aria-hidden />
+          <span>
+            <strong className="text-ink">O envio de e-mail está desligado neste ambiente.</strong>{" "}
+            Nada entra na fila. {envio.motivo} Depois de acertar na Vercel, faça um novo deploy.
+          </span>
         </p>
       ) : null}
 
