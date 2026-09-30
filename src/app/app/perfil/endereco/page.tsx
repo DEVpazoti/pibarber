@@ -10,7 +10,7 @@ import type { UserAddress } from "@/lib/types";
 export const metadata: Metadata = { title: "Endereço" };
 
 export default async function EnderecoPage() {
-  const perfil = await requireRole(["client"]);
+  const perfil = await requireRole(["client", "owner", "assistant"]);
 
   let endereco: UserAddress | null = null;
 

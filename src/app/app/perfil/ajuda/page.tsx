@@ -15,7 +15,7 @@ export const metadata: Metadata = { title: "Central de ajuda" };
  * funciona com leitor de tela e não custa um byte de bundle.
  */
 export default async function AjudaPage() {
-  await requireRole(["client"]);
+  await requireRole(["client", "owner", "assistant"]);
 
   return (
     <>

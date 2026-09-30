@@ -23,9 +23,16 @@ import { cn } from "@/lib/utils";
 export function Suporte({
   variante = "cartao",
   className,
+  antes,
 }: {
   variante?: "cartao" | "rodape";
   className?: string;
+  /**
+   * Uma linha a mais, acima dos contatos — o painel põe aqui o "Reportar
+   * problema". É um encaixe e não um botão fixo porque este componente é
+   * compartilhado com o app do cliente, que não tem esse formulário.
+   */
+  antes?: React.ReactNode;
 }) {
   const suporte = dadosSuporte();
 
@@ -45,8 +52,8 @@ export function Suporte({
         <p className="text-xs leading-relaxed text-danger">
           <span className="font-semibold">Suporte não configurado.</span> Preencha{" "}
           <code className="font-mono">NEXT_PUBLIC_SUPORTE_EMAIL</code> e{" "}
-          <code className="font-mono">NEXT_PUBLIC_SUPORTE_TELEFONE</code> antes do deploy.
-          Este aviso não aparece em produção.
+          <code className="font-mono">NEXT_PUBLIC_SUPORTE_TELEFONE</code> antes do deploy. Este
+          aviso não aparece em produção.
         </p>
       </div>
     );
@@ -100,7 +107,10 @@ export function Suporte({
             aria-hidden
           />
         </summary>
-        <div className="pt-0.5">{contatos}</div>
+        <div className="pt-0.5">
+          {antes}
+          {contatos}
+        </div>
       </details>
     );
   }

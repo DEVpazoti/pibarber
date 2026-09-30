@@ -269,7 +269,9 @@ export default async function LandingPage() {
             <span className="hidden sm:contents">
               <ThemeToggle />
             </span>
-            <LinkButton href="/entrar" variante="ghost" tamanho="sm">
+            {/* "Entrar" da landing é a porta da BARBEARIA (src/lib/lado.ts); o
+                cliente entra pelo "Sou cliente". */}
+            <LinkButton href="/entrar?tipo=barbearia" variante="ghost" tamanho="sm">
               Entrar
             </LinkButton>
             {/* Da landing, "Criar conta" é SEMPRE de barbearia: a landing vende

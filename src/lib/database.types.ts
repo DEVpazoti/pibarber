@@ -13,10 +13,91 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.18"
   }
   public: {
     Tables: {
+      admin_audit: {
+        Row: {
+          action: string
+          actor_id: string | null
+          barbershop_id: string | null
+          created_at: string
+          details: Json
+          id: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          barbershop_id?: string | null
+          created_at?: string
+          details?: Json
+          id?: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          barbershop_id?: string | null
+          created_at?: string
+          details?: Json
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_audit_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_audit_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_notes: {
+        Row: {
+          author_id: string | null
+          barbershop_id: string
+          body: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          author_id?: string | null
+          barbershop_id: string
+          body: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          author_id?: string | null
+          barbershop_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_notes_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_notes_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       amenities: {
         Row: {
           created_at: string
@@ -239,6 +320,9 @@ export type Database = {
           cover_url: string | null
           created_at: string
           description: string | null
+          email_booking_enabled: boolean
+          email_cancellation_enabled: boolean
+          email_marketing_enabled: boolean
           id: string
           is_active: boolean
           latitude: number | null
@@ -273,6 +357,9 @@ export type Database = {
           cover_url?: string | null
           created_at?: string
           description?: string | null
+          email_booking_enabled?: boolean
+          email_cancellation_enabled?: boolean
+          email_marketing_enabled?: boolean
           id?: string
           is_active?: boolean
           latitude?: number | null
@@ -307,6 +394,9 @@ export type Database = {
           cover_url?: string | null
           created_at?: string
           description?: string | null
+          email_booking_enabled?: boolean
+          email_cancellation_enabled?: boolean
+          email_marketing_enabled?: boolean
           id?: string
           is_active?: boolean
           latitude?: number | null
@@ -725,6 +815,101 @@ export type Database = {
           },
         ]
       }
+      email_messages: {
+        Row: {
+          appointment_id: string | null
+          attempts: number
+          barbershop_id: string | null
+          created_at: string
+          dedupe_key: string
+          external_id: string | null
+          failure_reason: string | null
+          id: string
+          kind: string
+          params: Json
+          recipient: string
+          scheduled_for: string
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          attempts?: number
+          barbershop_id?: string | null
+          created_at?: string
+          dedupe_key: string
+          external_id?: string | null
+          failure_reason?: string | null
+          id?: string
+          kind: string
+          params?: Json
+          recipient: string
+          scheduled_for?: string
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          attempts?: number
+          barbershop_id?: string | null
+          created_at?: string
+          dedupe_key?: string
+          external_id?: string | null
+          failure_reason?: string | null
+          id?: string
+          kind?: string
+          params?: Json
+          recipient?: string
+          scheduled_for?: string
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_messages_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_messages_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_opt_outs: {
+        Row: {
+          barbershop_id: string | null
+          created_at: string
+          email: string
+          id: string
+        }
+        Insert: {
+          barbershop_id?: string | null
+          created_at?: string
+          email: string
+          id?: string
+        }
+        Update: {
+          barbershop_id?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_opt_outs_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       favorites: {
         Row: {
           barbershop_id: string
@@ -757,6 +942,63 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feedbacks: {
+        Row: {
+          attachment_path: string | null
+          author_id: string | null
+          barbershop_id: string
+          context: Json
+          created_at: string
+          id: string
+          kind: string
+          message: string
+          page: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attachment_path?: string | null
+          author_id?: string | null
+          barbershop_id: string
+          context?: Json
+          created_at?: string
+          id?: string
+          kind: string
+          message: string
+          page?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attachment_path?: string | null
+          author_id?: string | null
+          barbershop_id?: string
+          context?: Json
+          created_at?: string
+          id?: string
+          kind?: string
+          message?: string
+          page?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedbacks_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedbacks_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
             referencedColumns: ["id"]
           },
         ]
@@ -831,6 +1073,35 @@ export type Database = {
           sort_order?: number
         }
         Relationships: []
+      }
+      platform_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       professional_schedules: {
         Row: {
@@ -1762,6 +2033,35 @@ export type Database = {
       }
     }
     Functions: {
+      admin_barbearias: {
+        Args: { p_shop?: string }
+        Returns: {
+          agendamentos_30d: number
+          avaliacoes: number
+          ciclo: string
+          city: string
+          clientes: number
+          created_at: string
+          dono_email: string
+          dono_nome: string
+          dono_telefone: string
+          id: string
+          name: string
+          nota: number
+          pago_ate: string
+          parcelado: boolean
+          plano_id: string
+          plano_nome: string
+          profissionais: number
+          setup_em: string
+          situacao: string
+          slug: string
+          state: string
+          sub_status: string
+          teste_ate: string
+        }[]
+      }
+      admin_metricas: { Args: never; Returns: Json }
       agendamento_por_token: {
         Args: { p_token: string }
         Returns: {
@@ -1855,6 +2155,14 @@ export type Database = {
       }
       complete_appointments_lote: { Args: { p_itens: Json }; Returns: number }
       concluir_setup_barbearia: { Args: { shop: string }; Returns: boolean }
+      contatos_da_lista_de_espera: {
+        Args: { p_shop: string }
+        Returns: {
+          entry_id: string
+          full_name: string
+          phone: string
+        }[]
+      }
       dashboard_summary: {
         Args: { p_ate?: string; p_de?: string; p_shop: string }
         Returns: Json
@@ -1863,6 +2171,100 @@ export type Database = {
       distancia_km: {
         Args: { lat1: number; lat2: number; lng1: number; lng2: number }
         Returns: number
+      }
+      email_cobranca_pendente: {
+        Args: never
+        Returns: {
+          barbearia: string
+          barbershop_id: string
+          chave: string
+          dono_email: string
+          dono_nome: string
+          link: string
+          quando: string
+          tipo: string
+          valor: number
+        }[]
+      }
+      email_dados_agendamentos: {
+        Args: { p_ids: string[] }
+        Returns: {
+          appointment_id: string
+          aviso_cancelado_ligado: boolean
+          aviso_novo_ligado: boolean
+          barbearia: string
+          barbearia_endereco: string
+          barbearia_slug: string
+          barbershop_id: string
+          cliente_email: string
+          cliente_nome: string
+          cliente_telefone: string
+          dono_email: string
+          dono_nome: string
+          profissional: string
+          public_token: string
+          servicos: string
+          source: string
+          starts_at: string
+          status: Database["public"]["Enums"]["appointment_status"]
+          tem_conta: boolean
+          total: number
+        }[]
+      }
+      email_do_cliente: { Args: { p_appointment: string }; Returns: string }
+      email_lembretes_pendentes: {
+        Args: { p_limite?: number }
+        Returns: string[]
+      }
+      email_notificacoes_pendentes: {
+        Args: { p_limite?: number }
+        Returns: {
+          corpo: string
+          email: string
+          link: string
+          nome: string
+          notification_id: string
+          tipo: string
+          titulo: string
+        }[]
+      }
+      email_recorrencia_candidatos: {
+        Args: { p_dias: number; p_limite?: number }
+        Returns: {
+          barbearia: string
+          barbershop_id: string
+          chave: string
+          customer_id: string
+          email: string
+          nome: string
+          slug: string
+          ultima_visita: string
+        }[]
+      }
+      email_reivindicar: {
+        Args: { p_id?: string; p_limite?: number }
+        Returns: {
+          appointment_id: string | null
+          attempts: number
+          barbershop_id: string | null
+          created_at: string
+          dedupe_key: string
+          external_id: string | null
+          failure_reason: string | null
+          id: string
+          kind: string
+          params: Json
+          recipient: string
+          scheduled_for: string
+          sent_at: string | null
+          status: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "email_messages"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_available_slots: {
         Args: { p_dia: string; p_duracao?: number; p_professional: string }
@@ -1884,6 +2286,7 @@ export type Database = {
       }
       limite_de_profissionais: { Args: { shop: string }; Returns: number }
       mark_no_show: { Args: { p_appointment: string }; Returns: string }
+      meus_agendamentos_ids: { Args: never; Returns: string[] }
       my_shop_id: { Args: never; Returns: string }
       next_walk_in_number: { Args: { p_shop: string }; Returns: number }
       owns_customer: { Args: { p_customer: string }; Returns: boolean }
@@ -1919,6 +2322,7 @@ export type Database = {
           reply: string
         }[]
       }
+      recorrencia_dias: { Args: never; Returns: number }
       revenue_series: {
         Args: { p_ate: string; p_de: string; p_shop: string }
         Returns: {

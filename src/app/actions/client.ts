@@ -1,10 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect, unstable_rethrow } from "next/navigation";
 
 import { requireProfile, requireRole } from "@/lib/auth";
 import { traduzirErroBanco, traduzirErroDesconhecido } from "@/lib/erros";
+import { COOKIE_LADO, OPCOES_COOKIE_LADO } from "@/lib/lado";
 import { criarBarbeariaDoDono, telefoneDeOutroDono } from "@/lib/nova-barbearia";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -508,15 +510,13 @@ export async function marcarTodasLidas(): Promise<ActionResult> {
  * (src/lib/nova-barbearia.ts): telefone único entre donos, loja escondida até
  * o fim do setup, promoção a `owner` pelo trigger.
  *
- * É UMA VIA SÓ: a conta tem um papel, e `owner` não entra mais no /app. Os
- * agendamentos que ela marcou como cliente continuam valendo para a barbearia
- * onde foram feitos — só não dá mais para acompanhá-los pelo app. Por isso a
- * tela exige `cienteDosAgendamentos` quando há horário marcado pela frente.
+ * A pessoa CONTINUA cliente: pela porta de cliente (/entrar) ela segue vendo
+ * os horários e favoritos dela; pela porta da barbearia, o painel. Ver
+ * src/lib/lado.ts.
  */
 export async function abrirMinhaBarbearia(entrada: {
   nomeBarbearia: string;
   telefone: string;
-  cienteDosAgendamentos: boolean;
 }): Promise<ActionResult> {
   try {
     const perfil = await requireRole(["client"]);
@@ -527,20 +527,6 @@ export async function abrirMinhaBarbearia(entrada: {
     if (nomeBarbearia.length < 2) return falha("Escreva o nome da barbearia.", "nomeBarbearia");
     const erroTelefone = erroDeTelefone(telefone);
     if (erroTelefone) return falha(erroTelefone, "telefone");
-
-    const supabase = await createClient();
-
-    // A RLS de `appointments` já limita ao que é da própria pessoa.
-    const { count, error: erroAgenda } = await supabase
-      .from("appointments")
-      .select("id", { count: "exact", head: true })
-      .in("status", ["scheduled", "confirmed"])
-      .gte("starts_at", new Date().toISOString());
-
-    if (erroAgenda) console.error("[cliente] falha ao contar os agendamentos:", erroAgenda);
-    if ((count ?? 0) > 0 && !entrada.cienteDosAgendamentos) {
-      return falha("Confirme que entendeu o que acontece com seus horários marcados.", "ciente");
-    }
 
     // Só depois de provar quem é (requireRole acima). Ver src/lib/supabase/admin.ts.
     const admin = createAdminClient();
@@ -572,6 +558,8 @@ export async function abrirMinhaBarbearia(entrada: {
         : falha("Não consegui abrir a barbearia. Tente de novo em instantes.");
     }
 
+    // Agora ela tem barbearia: segue do lado da barbearia (src/lib/lado.ts).
+    (await cookies()).set(COOKIE_LADO, "barbearia", OPCOES_COOKIE_LADO);
     revalidatePath("/", "layout");
     redirect("/configurar");
   } catch (error) {

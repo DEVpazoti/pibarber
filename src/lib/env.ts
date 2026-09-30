@@ -163,3 +163,38 @@ export function envAsaas(): EnvAsaas | null {
     sandbox,
   };
 }
+
+/* ==========================================================================
+   E-mail (Resend) — 31_emails.sql
+   ========================================================================== */
+
+export type EnvEmail = {
+  /** SEGREDO. `re_…`, do painel do Resend. */
+  apiKey: string;
+  /** "PiBarber <avisos@seudominio.com.br>" — o domínio precisa estar verificado no Resend. */
+  remetente: string;
+  /** Para onde vai a resposta de quem clica em "Responder". Opcional. */
+  responderPara: string | null;
+};
+
+/**
+ * As credenciais do Resend, ou `null` quando o e-mail não está ligado.
+ *
+ * Mesmo desenho do WhatsApp e do Asaas: sem `RESEND_API_KEY` o projeto sobe e
+ * funciona igual, só não manda e-mail (a fila nem recebe linha). Com ela, o
+ * remetente vira obrigatório — sem ele o Resend recusaria cada envio.
+ */
+export function envEmail(): EnvEmail | null {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  if (!apiKey) return null;
+
+  return {
+    apiKey,
+    remetente: obrigatoria(
+      "EMAIL_REMETENTE",
+      process.env.EMAIL_REMETENTE,
+      'com o remetente verificado no Resend, ex.: "PiBarber <avisos@seudominio.com.br>"',
+    ).trim(),
+    responderPara: process.env.EMAIL_RESPONDER_PARA?.trim() || null,
+  };
+}

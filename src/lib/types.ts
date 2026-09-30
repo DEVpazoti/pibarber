@@ -121,7 +121,14 @@ export type ShopContext = {
     paidUntil: string | null;
     /** Falso no parcelado: o dono precisa renovar no fim do período. */
     renovaSozinho: boolean;
+    /** Nome do plano com período pago em vigor ("Equipe"); nulo no teste grátis. */
+    planoPago: string | null;
   } | null;
+  /**
+   * "Ver como o dono": o admin da plataforma vendo o painel de uma loja. Toda
+   * server action é recusada em `requireShopContext()`; a tela só avisa.
+   */
+  somenteLeitura: boolean;
   /** Só o dono e o admin. Comanda caixa, comissão e relatório. */
   podeVerDinheiro: boolean;
 };

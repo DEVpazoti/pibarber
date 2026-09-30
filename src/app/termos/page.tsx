@@ -33,7 +33,7 @@ export const metadata: Metadata = {
 };
 
 /** Atualize junto com o texto. */
-const ATUALIZADO_EM = "23 de setembro de 2026";
+const ATUALIZADO_EM = "24 de setembro de 2026";
 
 export default function TermosDeServico() {
   return (
@@ -100,9 +100,9 @@ export default function TermosDeServico() {
               ser os de outra barbearia já cadastrada.
             </li>
             <li>
-              Quem já tem conta de cliente pode transformá-la na conta da sua barbearia, em Perfil →
-              Abrir minha barbearia. A partir daí ela passa a ser uma conta de barbearia e deixa de
-              acessar o aplicativo de cliente.
+              A mesma conta pode ser de barbearia e de cliente. Pelo “Entrar” da página inicial,
+              você acessa o painel da barbearia; pelo “Sou cliente”, agenda como cliente. Quem já
+              tem conta de cliente pode criar a sua barbearia com o mesmo login.
             </li>
           </Lista>
           <P>

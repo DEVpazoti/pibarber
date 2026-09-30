@@ -24,7 +24,7 @@ type Favorita = {
 };
 
 export default async function FavoritosPage() {
-  const perfil = await requireRole(["client"]);
+  const perfil = await requireRole(["client", "owner", "assistant"]);
 
   const favoritas = await carregar(perfil.id);
 

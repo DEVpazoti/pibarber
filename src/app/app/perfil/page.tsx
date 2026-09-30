@@ -20,30 +20,76 @@ import { requireRole } from "@/lib/auth";
 export const metadata: Metadata = { title: "Perfil" };
 
 const ITENS = [
-  { href: "/app/perfil/dados", Icone: User, titulo: "Meus Dados", subtitulo: "Altere as informações do seu perfil" },
-  { href: "/app/perfil/endereco", Icone: MapPin, titulo: "Endereço", subtitulo: "Altere seu endereço" },
-  { href: "/app/perfil/acessos", Icone: KeyRound, titulo: "Acessos", subtitulo: "Métodos de login da sua conta" },
-  { href: "/app/perfil/pessoas", Icone: Users, titulo: "Quem eu agendo", subtitulo: "Agende para filhos ou familiares" },
-  { href: "/app/perfil/favoritos", Icone: Heart, titulo: "Favoritos", subtitulo: "Suas barbearias favoritas" },
-  { href: "/app/perfil/seguranca", Icone: Lock, titulo: "Segurança", subtitulo: "Altere sua senha" },
-  { href: "/app/perfil/historico", Icone: History, titulo: "Histórico", subtitulo: "Seu histórico de agendamentos" },
-  { href: "/app/perfil/espera", Icone: Clock, titulo: "Lista de espera", subtitulo: "Acompanhe sua lista de espera" },
-  { href: "/app/perfil/barbearia", Icone: Store, titulo: "Abrir minha barbearia", subtitulo: "Tem uma barbearia? Coloque ela no PiBarber" },
-  { href: "/app/perfil/ajuda", Icone: HelpCircle, titulo: "Central de ajuda", subtitulo: "Perguntas frequentes e suporte" },
+  {
+    href: "/app/perfil/dados",
+    Icone: User,
+    titulo: "Meus Dados",
+    subtitulo: "Altere as informações do seu perfil",
+  },
+  {
+    href: "/app/perfil/endereco",
+    Icone: MapPin,
+    titulo: "Endereço",
+    subtitulo: "Altere seu endereço",
+  },
+  {
+    href: "/app/perfil/acessos",
+    Icone: KeyRound,
+    titulo: "Acessos",
+    subtitulo: "Métodos de login da sua conta",
+  },
+  {
+    href: "/app/perfil/pessoas",
+    Icone: Users,
+    titulo: "Quem eu agendo",
+    subtitulo: "Agende para filhos ou familiares",
+  },
+  {
+    href: "/app/perfil/favoritos",
+    Icone: Heart,
+    titulo: "Favoritos",
+    subtitulo: "Suas barbearias favoritas",
+  },
+  {
+    href: "/app/perfil/seguranca",
+    Icone: Lock,
+    titulo: "Segurança",
+    subtitulo: "Altere sua senha",
+  },
+  {
+    href: "/app/perfil/historico",
+    Icone: History,
+    titulo: "Histórico",
+    subtitulo: "Seu histórico de agendamentos",
+  },
+  {
+    href: "/app/perfil/espera",
+    Icone: Clock,
+    titulo: "Lista de espera",
+    subtitulo: "Acompanhe sua lista de espera",
+  },
+  {
+    href: "/app/perfil/barbearia",
+    Icone: Store,
+    titulo: "Abrir minha barbearia",
+    subtitulo: "Tem uma barbearia? Coloque ela no PiBarber",
+  },
+  {
+    href: "/app/perfil/ajuda",
+    Icone: HelpCircle,
+    titulo: "Central de ajuda",
+    subtitulo: "Perguntas frequentes e suporte",
+  },
 ] as const;
 
 export default async function PerfilPage() {
-  const perfil = await requireRole(["client"]);
+  const perfil = await requireRole(["client", "owner", "assistant"]);
 
   return (
     <div className="flex flex-col gap-6">
       {/* --- Cabeçalho ---------------------------------------------------- */}
       <header className="flex flex-col items-center gap-2 pt-2">
-        <FotoDoPerfil
-          profileId={perfil.id}
-          nome={perfil.full_name}
-          urlAtual={perfil.avatar_url}
-        />
+        <FotoDoPerfil profileId={perfil.id} nome={perfil.full_name} urlAtual={perfil.avatar_url} />
 
         <div className="text-center">
           <p className="text-lg font-semibold text-ink">{perfil.full_name ?? "Sua conta"}</p>
@@ -53,7 +99,10 @@ export default async function PerfilPage() {
 
       {/* --- Menu --------------------------------------------------------- */}
       <ul className="overflow-hidden rounded-card border border-line bg-surface">
-        {ITENS.map((item) => (
+        {ITENS.filter(
+          // "Abrir minha barbearia" é só para quem ainda não tem uma.
+          (item) => item.href !== "/app/perfil/barbearia" || perfil.role === "client",
+        ).map((item) => (
           <ProfileMenuItem key={item.href} {...item} />
         ))}
       </ul>

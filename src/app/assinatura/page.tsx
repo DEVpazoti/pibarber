@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { AssinaturaPainel } from "@/components/assinatura/AssinaturaPainel";
 import { AssinaturaVencidaAssistente } from "@/components/assinatura/AssinaturaVencidaAssistente";
 import { requireShopContext } from "@/lib/auth";
-import { sincronizarComAsaas } from "@/lib/assinatura-servidor";
+import { sincronizarComAsaas, temPagamentoConfirmado } from "@/lib/assinatura-servidor";
 import { envAsaas } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import type { Plan, PlanPrice, SubscriptionPayment } from "@/lib/types";
@@ -80,6 +80,10 @@ export default async function AssinaturaPage() {
       .from("subscription_payments")
       .select("*")
       .eq("barbershop_id", shopId)
+      // Fatura cancelada antes de ser paga (o dono trocou de plano ou de forma
+      // de pagamento, ou cancelou) nunca foi cobrada: na lista do dono só
+      // confunde. O /admin continua vendo, como "Cancelada".
+      .neq("status", "DELETED")
       .order("created_at", { ascending: false })
       .limit(24),
   ]);
@@ -87,6 +91,27 @@ export default async function AssinaturaPage() {
   for (const r of [assinatura, planos, precos, ativos, faturas]) {
     if (r.error) console.error("[assinatura] falha ao carregar:", r.error);
   }
+
+  // Escolha feita com período pago sobrando e ainda não paga (reativou depois
+  // de cancelar, ou renovou o parcelado): o dono pode trocar plano e forma de
+  // pagamento até pagar. Só pergunta ao Asaas quando há fatura em aberto — sem
+  // ela não há o que trocar, e não vale uma chamada a cada visita.
+  const a = assinatura.data;
+  const temFaturaAberta = (faturas.data ?? []).some((f) =>
+    ["PENDING", "OVERDUE"].includes(f.status),
+  );
+  const podeTrocar =
+    !!a &&
+    a.status === "active" &&
+    a.paid_until != null &&
+    new Date(a.paid_until) > new Date() &&
+    Boolean(a.asaas_subscription_id || a.asaas_installment_id) &&
+    temFaturaAberta &&
+    cobrancaLigada() &&
+    !(await temPagamentoConfirmado({
+      assinatura: a.asaas_subscription_id,
+      parcelamento: a.asaas_installment_id,
+    }));
 
   return (
     <AssinaturaPainel
@@ -98,6 +123,7 @@ export default async function AssinaturaPage() {
       profissionaisAtivos={ativos.count ?? 0}
       faturas={(faturas.data ?? []) as SubscriptionPayment[]}
       pagamentoDisponivel={cobrancaLigada()}
+      podeTrocar={podeTrocar}
     />
   );
 }

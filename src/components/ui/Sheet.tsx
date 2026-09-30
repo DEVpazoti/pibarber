@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 import { cn } from "@/lib/utils";
@@ -30,6 +30,9 @@ export function Sheet({
 }) {
   const [montado, setMontado] = useState(false);
   useEffect(() => setMontado(true), []);
+  // O nome da janela para o leitor de tela (e para os testes) — ver o Modal.
+  const idTitulo = useId();
+  const idDescricao = useId();
 
   useTravaRolagem(aberto);
   useFecharNoEsc(aberto, aoFechar);
@@ -48,6 +51,8 @@ export function Sheet({
       <div
         role="dialog"
         aria-modal="true"
+        aria-labelledby={titulo ? idTitulo : undefined}
+        aria-describedby={descricao ? idDescricao : undefined}
         className={cn(
           "absolute flex flex-col bg-surface shadow-float animate-fade-up",
           lado === "bottom"
@@ -65,8 +70,14 @@ export function Sheet({
         {titulo ? (
           <div className="flex items-start justify-between gap-3 px-5 py-4">
             <div className="min-w-0">
-              <h2 className="text-base font-semibold text-ink">{titulo}</h2>
-              {descricao ? <p className="mt-0.5 text-sm text-ink-soft">{descricao}</p> : null}
+              <h2 id={idTitulo} className="text-base font-semibold text-ink">
+                {titulo}
+              </h2>
+              {descricao ? (
+                <p id={idDescricao} className="mt-0.5 text-sm text-ink-soft">
+                  {descricao}
+                </p>
+              ) : null}
             </div>
             <button
               type="button"
@@ -81,9 +92,7 @@ export function Sheet({
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-4">{children}</div>
 
-        {rodape ? (
-          <div className="border-t border-line px-5 py-4 pb-safe">{rodape}</div>
-        ) : null}
+        {rodape ? <div className="border-t border-line px-5 py-4 pb-safe">{rodape}</div> : null}
       </div>
     </div>,
     document.body,
