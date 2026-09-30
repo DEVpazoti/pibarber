@@ -584,9 +584,9 @@ Classificação de erro (transitório ou não) em `classificarErro()`,
 
 ## 11. Dívidas técnicas conhecidas
 
-- Testes E2E nas fases 1 a 3 (login, cliente, setup, assinatura, painel do dia
-  a dia e segurança por papel, inclusive pela API direto — `docs/e2e.md`). O
-  /admin ainda não tem teste.
+- Testes E2E cobrem as fases 1 a 4 (`docs/e2e.md`, 52 testes). Ficam de fora
+  só os fluxos que chamam a API do Asaas: assinar, estorno e cancelamento pelo
+  /admin — esses, à mão no sandbox. Sem CI ainda (GitHub Actions).
 - `AUDITORIA_BUGS.md` e `AUDITORIA_SEGURANCA.md` listam achados; conferir se o
   item em que você vai mexer já está catalogado antes de "descobrir" de novo.
 - `database.types.ts` é gerado à mão pelo painel do Supabase — fácil de esquecer.
