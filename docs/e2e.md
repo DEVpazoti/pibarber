@@ -43,7 +43,7 @@ O que vem de fora é simulado:
 - **Localização do setup**: GPS simulado do navegador.
 - **WhatsApp e Google Maps**: desligados.
 
-## O que está coberto (fase 1)
+## O que está coberto (fases 1 e 2 — 33 testes, ~3,5 min)
 
 | Arquivo | Fluxos |
 |---|---|
@@ -51,10 +51,10 @@ O que vem de fora é simulado:
 | `cliente.spec.ts` | busca; agendar logado (+ e-mails ao cliente e ao dono); cancelar (+ aviso ao dono); avaliar; agendar sem conta e o link `/a/<token>`; loja que exige conta. Roda também no **celular** (Pixel 7) |
 | `setup.spec.ts` | cadastro do dono → 6 etapas → loja no ar; celular repetido recusado |
 | `assinatura.spec.ts` | teste vencido pausa painel e página pública; pagamento pelo webhook libera; aviso de teste acabando (uma vez só); webhook e cron sem segredo recusados |
+| `painel.spec.ts` (fase 2) | encaixe pelo balcão; concluir no Pix (caixa + comissão) e pagar a comissão; falta; cancelar pelo painel (+ e-mail ao cliente); fiado concluído e recebido; pendências concluídas em lote; limite do plano Solo na equipe; lista de espera (com nome e contato) |
 
-Próximas fases (ainda não feitas): o dia a dia do painel (agenda, caixa,
-comissões, fiado, espera, pendências, equipe), segurança (assistente sem
-dinheiro, "ver como o dono" só leitura), /admin e o lembrete de voltar.
+Próximas fases (ainda não feitas): segurança (assistente sem dinheiro, "ver
+como o dono" só leitura, dono pelo lado cliente), /admin e o lembrete de voltar.
 
 ## Escrevendo um teste novo
 
@@ -68,6 +68,10 @@ dinheiro, "ver como o dono" só leitura), /admin e o lembrete de voltar.
   da hora em que o teste roda.
 - **Agendamento sem conta**: passe um `x-forwarded-for` próprio — o app aceita
   um por IP a cada 30 s, e todos os testes saem do mesmo computador.
+- **Janelas**: ache pelo título — `getByRole("dialog", { name: "Concluir atendimento" })`.
+  O Modal e o Sheet ligam o título via `aria-labelledby`.
+- **Não sabe o nome de um botão?** `console.log(await page.locator("main").ariaSnapshot())`
+  mostra a tela como o Playwright a enxerga.
 - **Cache da página pública**: mude o banco ANTES da primeira visita, ou passe
   por algo que revalide (o webhook, as actions).
 

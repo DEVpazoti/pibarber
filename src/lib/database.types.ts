@@ -2155,6 +2155,14 @@ export type Database = {
       }
       complete_appointments_lote: { Args: { p_itens: Json }; Returns: number }
       concluir_setup_barbearia: { Args: { shop: string }; Returns: boolean }
+      contatos_da_lista_de_espera: {
+        Args: { p_shop: string }
+        Returns: {
+          entry_id: string
+          full_name: string
+          phone: string
+        }[]
+      }
       dashboard_summary: {
         Args: { p_ate?: string; p_de?: string; p_shop: string }
         Returns: Json

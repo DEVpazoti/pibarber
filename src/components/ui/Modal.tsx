@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 import { cn } from "@/lib/utils";
@@ -61,6 +61,10 @@ export function Modal({
 }) {
   useTravaRolagem(aberto);
   useFecharNoEsc(aberto, aoFechar);
+  // O leitor de tela anuncia a janela pelo título ("Concluir atendimento"),
+  // não só "diálogo". É também como os testes E2E acham cada janela.
+  const idTitulo = useId();
+  const idDescricao = useId();
 
   if (!aberto) return null;
 
@@ -84,6 +88,8 @@ export function Modal({
         <div
           role="dialog"
           aria-modal="true"
+          aria-labelledby={titulo ? idTitulo : undefined}
+          aria-describedby={descricao ? idDescricao : undefined}
           className={cn(
             "relative z-10 flex w-full flex-col rounded-t-card bg-surface shadow-float",
             "max-h-[92dvh] animate-fade-up sm:rounded-card",
@@ -93,9 +99,13 @@ export function Modal({
           {titulo ? (
             <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
               <div className="min-w-0">
-                <h2 className="text-base font-semibold text-ink">{titulo}</h2>
+                <h2 id={idTitulo} className="text-base font-semibold text-ink">
+                  {titulo}
+                </h2>
                 {descricao ? (
-                  <p className="mt-0.5 text-sm text-ink-soft">{descricao}</p>
+                  <p id={idDescricao} className="mt-0.5 text-sm text-ink-soft">
+                    {descricao}
+                  </p>
                 ) : null}
               </div>
               <button
@@ -111,9 +121,7 @@ export function Modal({
 
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
 
-          {rodape ? (
-            <div className="border-t border-line px-5 py-4 pb-safe">{rodape}</div>
-          ) : null}
+          {rodape ? <div className="border-t border-line px-5 py-4 pb-safe">{rodape}</div> : null}
         </div>
       </div>
     </Portal>
