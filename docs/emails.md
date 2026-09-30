@@ -11,7 +11,7 @@ O remetente é sempre o PiBarber; o nome da barbearia vai no texto (CONTEXT §1)
 
 ## 1. Domínio no Resend
 
-1. resend.com → **Domains → Add domain** → o domínio (ou um subdomínio, ex.: `mail.seudominio.com.br`, que isola a reputação do domínio principal).
+1. resend.com → **Domains → Add domain** → o domínio (ou um subdomínio, ex.: `mail.pibarber.app`, que isola a reputação do domínio principal).
 2. Copie para o DNS os registros que o Resend mostrar (**SPF** e **DKIM**) e acrescente um **DMARC** (`_dmarc` TXT `v=DMARC1; p=none;`). Espere o status **Verified**.
 3. **API Keys → Create** com permissão *Sending access*, restrita ao domínio. É o `RESEND_API_KEY`.
 
@@ -21,8 +21,8 @@ Plano grátis: 3.000 e-mails/mês e 100/dia. Com o lembrete de voltar ligado em 
 
 ```
 RESEND_API_KEY=re_...
-EMAIL_REMETENTE="PiBarber <avisos@seudominio.com.br>"
-EMAIL_RESPONDER_PARA=contato@seudominio.com.br   # opcional
+EMAIL_REMETENTE="PiBarber <avisos@mail.pibarber.app>"
+EMAIL_RESPONDER_PARA=contato@pibarber.app   # opcional
 ```
 
 `NEXT_PUBLIC_SITE_URL` precisa estar certo: todo link de e-mail sai dele.
@@ -33,7 +33,7 @@ EMAIL_RESPONDER_PARA=contato@seudominio.com.br   # opcional
 
 | Campo | Valor |
 |---|---|
-| Sender email | `avisos@seudominio.com.br` |
+| Sender email | `avisos@mail.pibarber.app` |
 | Sender name | `PiBarber` |
 | Host | `smtp.resend.com` |
 | Port | `465` |
@@ -58,7 +58,7 @@ que troca o token por sessão (`verifyOtp`). Funciona mesmo abrindo o e-mail em
 outro aparelho — o modelo padrão (`{{ .ConfirmationURL }}`) usa o código do
 PKCE, que só vale no navegador que pediu.
 
-Confira em **URL Configuration → Redirect URLs** que `https://SEU-SITE/callback**`
+Confira em **URL Configuration → Redirect URLs** que `https://pibarber.app/callback**`
 está na lista.
 
 ## 5. O cron dos e-mails (lembretes, cobrança, volta)
@@ -75,7 +75,7 @@ select cron.schedule(
   '*/5 * * * *',
   $job$
     select net.http_post(
-      url     := 'https://SEU-SITE/api/cron/emails',
+      url     := 'https://pibarber.app/api/cron/emails',
       headers := jsonb_build_object(
         'Content-Type',  'application/json',
         'Authorization', 'Bearer ' || (
@@ -89,7 +89,7 @@ select cron.schedule(
 );
 ```
 
-Teste manual: `curl -X POST -H "Authorization: Bearer $CRON_SECRET" https://SEU-SITE/api/cron/emails`.
+Teste manual: `curl -X POST -H "Authorization: Bearer $CRON_SECRET" https://pibarber.app/api/cron/emails`.
 
 ## 6. Lembrete de voltar (marketing)
 

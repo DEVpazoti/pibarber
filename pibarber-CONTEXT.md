@@ -18,7 +18,7 @@ de login" (sobre `a3174d3`).
 ## 1. O que é
 
 Plataforma de agendamento e gestão para barbearias, em produção em
-`pibarber.vercel.app`.
+`pibarber.app`.
 
 **É um marketplace, não um sistema por barbearia.** Essa frase decide quase
 tudo. O cliente tem UMA conta no PiBarber e agenda em qualquer barbearia
@@ -388,7 +388,7 @@ dia anterior no fuso de São Paulo.
 Até o agente 01 não existia nada agendado. **Agora existe um gatilho:**
 
 - **Mecanismo: `pg_cron` + `pg_net` no Supabase**, a cada **5 minutos**,
-  fazendo `POST https://pibarber.vercel.app/api/cron/whatsapp`.
+  fazendo `POST https://pibarber.app/api/cron/whatsapp`.
 - **Protegido por `CRON_SECRET`**, no cabeçalho `Authorization: Bearer …`. O
   segredo fica no **Vault** do Supabase (`whatsapp_cron_secret`), não no texto
   do job. Sem `CRON_SECRET` na Vercel, o endpoint recusa todo mundo.

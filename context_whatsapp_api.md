@@ -56,7 +56,7 @@ node --no-warnings scripts/whatsapp-templates.mjs --listar
 - [ ] `WHATSAPP_APP_SECRET`
 - [ ] `WHATSAPP_WEBHOOK_VERIFY_TOKEN`
 - [ ] `CRON_SECRET`
-- [ ] Conferir `NEXT_PUBLIC_SITE_URL` = `https://pibarber.vercel.app`
+- [ ] Conferir `NEXT_PUBLIC_SITE_URL` = `https://pibarber.app`
 
 Marcar **Production**. Nenhuma com prefixo `NEXT_PUBLIC_`.
 
@@ -110,7 +110,7 @@ Bônus: **`pg_cron` e `pg_net` já estavam instalados** no projeto, então o pas
 - [x] Página de política de privacidade criada — fica em `/privacidade`
       (entra no ar junto com o deploy do passo 2)
 - [ ] Preencher a URL em Configurações do app → Básico:
-      `https://pibarber.vercel.app/privacidade`
+      `https://pibarber.app/privacidade`
 - [ ] Virar para **Ao vivo**
 
 Em modo de desenvolvimento só chegam webhooks de teste — é o aviso amarelo do

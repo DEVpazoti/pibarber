@@ -550,7 +550,7 @@ end $$;
 --     '*/5 * * * *',
 --     $job$
 --       select net.http_post(
---         url     := 'https://pibarber.vercel.app/api/cron/whatsapp',
+--         url     := 'https://pibarber.app/api/cron/whatsapp',
 --         headers := jsonb_build_object(
 --           'Content-Type',  'application/json',
 --           'Authorization', 'Bearer ' || (

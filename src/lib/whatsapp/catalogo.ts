@@ -88,7 +88,7 @@ export const CATALOGO: Readonly<Record<EventoWhatsapp, TemplateDoCatalogo>> = {
       "sexta, 18/09",
       "14:30",
       "Carlos",
-      "https://pibarber.vercel.app/app/agendamentos",
+      "https://pibarber.app/app/agendamentos",
     ],
   },
   reminder: {
@@ -106,7 +106,7 @@ export const CATALOGO: Readonly<Record<EventoWhatsapp, TemplateDoCatalogo>> = {
       "Barbearia do Zé",
       "14:30",
       "Carlos",
-      "https://pibarber.vercel.app/app/agendamentos",
+      "https://pibarber.app/app/agendamentos",
     ],
   },
   cancellation: {
@@ -124,7 +124,7 @@ export const CATALOGO: Readonly<Record<EventoWhatsapp, TemplateDoCatalogo>> = {
       "Barbearia do Zé",
       "sexta, 18/09",
       "14:30",
-      "https://pibarber.vercel.app/b/barbearia-do-ze",
+      "https://pibarber.app/b/barbearia-do-ze",
     ],
   },
 };
