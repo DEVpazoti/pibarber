@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath, revalidateTag } from "next/cache";
-import { unstable_rethrow } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 
 import { requireOwnerContext } from "@/lib/auth";
 import { traduzirErroBanco, traduzirErroDesconhecido } from "@/lib/erros";
@@ -369,11 +369,7 @@ export async function concluirSetup(
     const supabase = await createClient();
 
     const [loja, horarios, servicos, profissionais] = await Promise.all([
-      supabase
-        .from("barbershops")
-        .select("latitude, longitude")
-        .eq("id", shopId)
-        .maybeSingle(),
+      supabase.from("barbershops").select("latitude, longitude").eq("id", shopId).maybeSingle(),
       supabase
         .from("business_hours")
         .select("id", { count: "exact", head: true })
@@ -424,7 +420,13 @@ export async function concluirSetup(
     revalidatePath("/painel", "layout");
     revalidateTag(tagBarbearia(shopId));
     revalidateTag(TAG_SLUGS);
-    return sucesso({ noAr: Boolean(noAr) });
+
+    // Vai para a tela de "no ar" por REDIRECT, e não devolvendo para o
+    // cliente mostrar: qualquer revalidate numa action faz o Next re-renderizar
+    // /configurar, que com o setup concluído manda para /painel — e a tela com
+    // o link da página e o "divulgar no WhatsApp" nunca aparecia (achado pelo
+    // teste E2E, e2e/setup.spec.ts).
+    redirect(noAr ? "/configurar/pronto" : "/configurar/pronto?fora=1");
   } catch (error) {
     unstable_rethrow(error);
     return falha(traduzirErroDesconhecido(error, "[setup] concluirSetup"));

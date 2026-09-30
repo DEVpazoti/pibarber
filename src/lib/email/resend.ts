@@ -37,6 +37,11 @@ export async function enviarEmail(entrada: {
       transitorio: false,
     });
 
+  // Testes E2E (playwright.config.ts): a fila anda até `sent`, mas nada sai
+  // para o Resend. É o que deixa o teste conferir QUE e-mail iria para QUEM
+  // sem mandar e-mail de verdade.
+  if (process.env.EMAIL_SIMULAR === "1") return `simulado-${entrada.chaveIdempotencia}`;
+
   let resposta: Response;
   try {
     resposta = await fetch("https://api.resend.com/emails", {
