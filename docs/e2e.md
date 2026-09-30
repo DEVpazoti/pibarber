@@ -21,8 +21,11 @@ E2E_SEM_RESET=1 npx playwright test e2e/cliente.spec.ts
 E2E_SEM_RESET=1 npx playwright test e2e/cliente.spec.ts:46 --project=computador
 ```
 
-Pode rodar com o `npm run dev` ligado: o servidor de teste usa a porta **3100**
-e a pasta `.next-e2e` (`NEXT_DIST_DIR`), sem atropelar o `.next` do dev.
+O servidor de teste usa a porta **3100** e a pasta `.next-e2e`
+(`NEXT_DIST_DIR`), sem atropelar o `.next` do dev. ⚠️ Mas **desligue o
+`npm run dev` antes da bateria inteira** numa máquina de ~8 GB: os dois `next
+dev`, os navegadores e o Supabase no Docker juntos esgotam a memória e a
+máquina trava.
 
 ## Como é montado
 
@@ -43,7 +46,7 @@ O que vem de fora é simulado:
 - **Localização do setup**: GPS simulado do navegador.
 - **WhatsApp e Google Maps**: desligados.
 
-## O que está coberto (fases 1 a 3 — 41 testes)
+## O que está coberto (fases 1 a 4 — 52 testes)
 
 | Arquivo | Fluxos |
 |---|---|
@@ -61,8 +64,16 @@ testada, não a tela. Cada "não vê" tem uma **prova de controle**: a mesma
 consulta, feita por quem pode, acha o dado. Sem ela, um vazio podia ser só uma
 consulta quebrada.
 
-Próxima fase (ainda não feita): /admin (métricas, ficha, estorno, relatos) e o
-lembrete de voltar.
+| `admin.spec.ts` (fase 4) | visão geral aponta teste acabando; busca e ficha; nota interna; estender o teste (+ histórico); desativar/ativar a loja; relato do dono pelo painel resolvido no /admin |
+| `emails.spec.ts` (fase 4) | lembrete de voltar para quem sumiu; descadastro pela página e de um clique, e respeitado no ciclo seguinte; loja que desligou; quem já tem horário; o intervalo do /admin; lembrete da véspera sem duplicar |
+
+Fora da bateria, de propósito: **estorno e cancelamento pelo /admin** e a
+**tela de assinar** — os três chamam a API do Asaas, que o ambiente de teste
+não tem. Teste à mão no sandbox (docs/emails.md não cobre; ver o fluxo em
+src/lib/asaas.ts).
+
+`emails.spec.ts` roda **em série**: o intervalo do lembrete de voltar é da
+plataforma, e mudar ele num teste afetaria outro rodando ao lado.
 
 ## Escrevendo um teste novo
 
