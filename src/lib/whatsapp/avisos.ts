@@ -29,11 +29,11 @@ import {
  *      errado: o cron pega depois.
  *   2. ENVIAR — em `after()`, DEPOIS que a resposta já saiu. A chamada à Meta
  *      pode levar até 15s; ela não pode segurar a tela de "Agendado!". É o que
- *      faz a confirmação chegar em segundos em vez de esperar os 5 minutos
+ *      faz o aviso chegar em segundos em vez de esperar os 5 minutos
  *      do cron.
  */
 export async function avisarPorWhatsapp(
-  evento: "confirmation" | "cancellation",
+  evento: "cancellation",
   alvo: { appointmentId: string } | { token: string },
 ): Promise<void> {
   try {
@@ -61,9 +61,7 @@ export async function avisarPorWhatsapp(
     if (!linha) return;
 
     // O interruptor da barbearia (/painel/configuracoes).
-    const ligado =
-      evento === "confirmation" ? linha.confirmacao_ligada : linha.cancelamento_ligado;
-    if (!ligado) return;
+    if (!linha.cancelamento_ligado) return;
 
     const resultado = await enfileirar({
       barbershopId: linha.barbershop_id,

@@ -4,11 +4,8 @@ import { AlertCircle, Check, Copy, ExternalLink, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
-import {
-  salvarBarbearia,
-  salvarHorarios,
-  type LinhaHorario,
-} from "@/app/actions/shop";
+import { salvarBarbearia, salvarHorarios, type LinhaHorario } from "@/app/actions/shop";
+import { AvisosEmail } from "@/components/painel/AvisosEmail";
 import { AvisosWhatsapp } from "@/components/painel/AvisosWhatsapp";
 import { BeneficiosBarbearia } from "@/components/painel/BeneficiosBarbearia";
 import { EditorHorarios, linhasDeHorario } from "@/components/painel/EditorHorarios";
@@ -21,8 +18,8 @@ import { mascaraCEP, mascaraTelefone, soDigitos } from "@/lib/utils";
 /**
  * As configurações da barbearia. Só o dono chega aqui.
  *
- * Quatro formulários independentes: os dados da loja, os benefícios, o horário
- * de funcionamento e as mensagens de WhatsApp. Separados porque são salvos em
+ * Cinco formulários independentes: os dados da loja, os benefícios, o horário
+ * de funcionamento, as mensagens de WhatsApp e os e-mails. Separados porque são salvos em
  * momentos diferentes — o dono mexe no horário duas vezes por ano e no
  * telefone quase nunca.
  */
@@ -33,6 +30,8 @@ export function ConfiguracoesPainel({
   catalogoBeneficios,
   beneficiosMarcados,
   whatsapp,
+  diasVolta,
+  emailDono,
 }: {
   loja: Barbershop;
   horarios: BusinessHour[];
@@ -40,6 +39,8 @@ export function ConfiguracoesPainel({
   catalogoBeneficios: Amenity[];
   beneficiosMarcados: string[];
   whatsapp: PainelWhatsapp;
+  diasVolta: number;
+  emailDono: string | null;
 }) {
   return (
     <div className="flex flex-col gap-10">
@@ -50,6 +51,15 @@ export function ConfiguracoesPainel({
       />
       <FormHorarios horarios={horarios} />
       <AvisosWhatsapp painel={whatsapp} />
+      <AvisosEmail
+        iniciais={{
+          novo: loja.email_booking_enabled,
+          cancelado: loja.email_cancellation_enabled,
+          volta: loja.email_marketing_enabled,
+        }}
+        diasVolta={diasVolta}
+        emailDono={emailDono}
+      />
     </div>
   );
 }
@@ -85,9 +95,7 @@ function FormDados({ loja, urlPublica }: { loja: Barbershop; urlPublica: string 
   const [permiteSemCadastro, setPermiteSemCadastro] = useState(loja.allow_public_booking);
   const [minAntecedencia, setMinAntecedencia] = useState(String(loja.min_advance_minutes));
   const [maxDias, setMaxDias] = useState(String(loja.max_advance_days));
-  const [prazoCancelamento, setPrazoCancelamento] = useState(
-    String(loja.cancel_deadline_hours),
-  );
+  const [prazoCancelamento, setPrazoCancelamento] = useState(String(loja.cancel_deadline_hours));
 
   const [buscandoCep, setBuscandoCep] = useState(false);
   const [copiado, setCopiado] = useState(false);
@@ -334,8 +342,8 @@ function FormDados({ loja, urlPublica }: { loja: Barbershop; urlPublica: string 
           className="h-5 w-5 accent-brass"
         />
         <span className="text-sm text-ink">
-          Aceitar agendamento pelo app. Desligado, o perfil mostra telefone e WhatsApp no
-          lugar do botão.
+          Aceitar agendamento pelo app. Desligado, o perfil mostra telefone e WhatsApp no lugar do
+          botão.
         </span>
       </label>
 
@@ -358,29 +366,25 @@ function FormDados({ loja, urlPublica }: { loja: Barbershop; urlPublica: string 
             <span className="text-sm text-ink">
               <span className="font-medium">Permitir agendamento sem cadastro</span>
               <span className="mt-0.5 block text-ink-soft">
-                O cliente agenda informando só nome e telefone. Ele aparece na Agenda e em
-                Clientes como qualquer outro, marcado como “sem cadastro”, e recebe um link
-                para acompanhar ou cancelar.
+                O cliente agenda informando só nome e telefone. Ele aparece na Agenda e em Clientes
+                como qualquer outro, marcado como “sem cadastro”, e recebe um link para acompanhar
+                ou cancelar.
               </span>
             </span>
           </label>
 
           {permiteSemCadastro ? (
             <p className="mt-2 border-t border-line pt-2 text-xs text-ink-faint">
-              Converte mais — muita gente desiste na hora de criar conta. Em troca, seu
-              endereço de agendamento fica aberto: há limites automáticos por telefone e por
-              origem para conter spam, mas se aparecer horário falso, é só desmarcar aqui.
+              Converte mais — muita gente desiste na hora de criar conta. Em troca, seu endereço de
+              agendamento fica aberto: há limites automáticos por telefone e por origem para conter
+              spam, mas se aparecer horário falso, é só desmarcar aqui.
             </p>
           ) : null}
         </div>
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Field
-          label="Antecedência mínima"
-          htmlFor="cfg-min"
-          dica="Em minutos."
-        >
+        <Field label="Antecedência mínima" htmlFor="cfg-min" dica="Em minutos.">
           <Input
             id="cfg-min"
             inputMode="numeric"

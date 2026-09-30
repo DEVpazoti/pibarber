@@ -1,9 +1,8 @@
-import { timingSafeEqual } from "node:crypto";
-
 import { unstable_rethrow } from "next/navigation";
 import { NextResponse, type NextRequest } from "next/server";
 
-import { envCronSecret, envWhatsapp } from "@/lib/env";
+import { cronAutorizado } from "@/lib/cron";
+import { envWhatsapp } from "@/lib/env";
 import { despachar, varrerLembretes } from "@/lib/whatsapp/fila";
 import { sincronizarTemplates } from "@/lib/whatsapp/templates";
 
@@ -29,22 +28,8 @@ export const runtime = "nodejs";
 // travamento da Meta segure a função até o limite do plano.
 export const maxDuration = 60;
 
-function autorizado(request: NextRequest): boolean {
-  const segredo = envCronSecret();
-  if (!segredo) {
-    console.error("[cron whatsapp] CRON_SECRET não definido — recusando toda chamada.");
-    return false;
-  }
-
-  // Comparação em tempo constante: `===` numa string secreta vaza, pelo tempo
-  // de resposta, quantos caracteres do começo estavam certos.
-  const recebido = Buffer.from(request.headers.get("authorization") ?? "");
-  const esperado = Buffer.from(`Bearer ${segredo}`);
-  return recebido.length === esperado.length && timingSafeEqual(recebido, esperado);
-}
-
 async function executar(request: NextRequest) {
-  if (!autorizado(request)) {
+  if (!cronAutorizado(request, "whatsapp")) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 

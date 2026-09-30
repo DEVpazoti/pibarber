@@ -79,6 +79,7 @@ Next.js 15 (App Router) · React 19 · TypeScript · Tailwind CSS v4
 Supabase (Postgres + Auth + Storage) · Leaflet · Recharts · Vercel
 Meta WhatsApp Cloud API (fetch nativo, sem SDK)
 Asaas API v3 (cobrança das assinaturas; fetch nativo, sem SDK)
+Resend (e-mails; API por fetch + SMTP do Supabase Auth)
 ```
 
 O que **não** existe neste projeto, e que é fácil assumir por engano:
@@ -87,8 +88,8 @@ O que **não** existe neste projeto, e que é fácil assumir por engano:
   Next: Server Components, Server Actions e (raramente) Route Handlers.
 - **Sem ORM.** Sem Prisma, sem Drizzle. O acesso é o client do Supabase, e os
   tipos vêm de `src/lib/database.types.ts`, gerado a partir do banco.
-- **Sem BullMQ, Redis nem processo de background.** Existe UMA fila, e ela é
-  uma tabela: `whatsapp_messages` (§9). O "worker" é um Route Handler chamado
+- **Sem BullMQ, Redis nem processo de background.** As filas são tabelas:
+  `whatsapp_messages` (§9) e `email_messages` (§15), com o mesmo desenho. O "worker" é um Route Handler chamado
   pelo `pg_cron` (§7). Não crie outra infraestrutura de fila — estenda esse
   desenho.
 - **Sem framework de teste.** Não há Jest, Vitest nem Playwright. `npm run
@@ -119,7 +120,8 @@ node --no-warnings scripts/whatsapp-templates.mjs --ver|--enviar|--listar   # te
 src/
   app/
     (auth)/            entrar, criar-conta (?tipo=barbearia = porta do dono), callback
-                       (Route Handler do OAuth, lê ?lado=), email-confirmado
+                       (OAuth + token_hash dos e-mails, lê ?lado=), email-confirmado,
+                       esqueci-senha, redefinir-senha
     app/               O APP DO CLIENTE (PWA): agendamentos, buscar, notificações, perfil/*
                        (perfil/barbearia = "abrir minha barbearia")
     painel/            O PAINEL DO DONO/ASSISTENTE: agenda, caixa, clientes, comissões,
@@ -135,6 +137,9 @@ src/
       cron/whatsapp/     O "worker": lembretes + despacho da fila. Protegido por CRON_SECRET
       webhooks/whatsapp/ Webhook da Meta: status de entrega, templates, opt-out
       webhooks/asaas/    Webhook do Asaas: pagamentos da assinatura (header asaas-access-token)
+      cron/emails/       O worker dos e-mails (§15). Mesmo CRON_SECRET
+      emails/sair/[id]/  Descadastro de um clique (Gmail), sem sessão
+    sair/[id]/         Página "não quero mais receber" do e-mail de volta
     actions/           SERVER ACTIONS — toda escrita passa por aqui
       admin, admin-assinatura, admin-notas, admin-visualizacao, appointments,
       assinatura, auth, booking, client, customers, feedback, money, publico,
@@ -155,6 +160,10 @@ src/
     visualizacao.ts    cookie do "ver como o dono" (somente leitura)
     lado.ts            cookie da porta de login (cliente | barbearia)
     nova-barbearia.ts  criação da loja (cadastro do dono e "abrir minha barbearia")
+    email/             modelos.ts (textos e layout), fila.ts (enfileirar, despachar,
+                       varreduras do cron), avisos.ts (o gancho das actions),
+                       resend.ts (HTTP), descadastro.ts
+    cron.ts            cronAutorizado() — o Bearer CRON_SECRET dos dois crons
     auth.ts, config.ts, database.types.ts, env.ts, erros.ts, telefone.ts,
     utils.ts, periodo.ts, imagens.ts, geocoding.ts, viacep.ts, suporte.ts, ...
 supabase/              MIGRAÇÕES SQL NUMERADAS (ver §4)
@@ -198,9 +207,11 @@ isolada com o env de produção. **Produção só com autorização explícita.*
 28_feedbacks             relatos do painel (+ bucket privado `feedbacks`)
 29_admin_dashboard       admin_notes, admin_audit, admin_barbearias(), admin_metricas()
 30_lado_cliente          meus_agendamentos_ids() e client_home com a regra do lado cliente
+31_emails                email_messages, email_opt_outs, platform_settings, interruptores de e-mail
 ```
 
-**A próxima migração é a `31_`.** Regras para escrever uma:
+**A próxima migração é a `32_`.** Os modelos de e-mail do Supabase Auth ficam
+em `supabase/emails/*.html` (colados à mão no painel — `docs/emails.md`). Regras para escrever uma:
 
 - Idempotente de ponta a ponta. `create table if not exists`, `do $$ ... exception
   when duplicate_object then null; end $$` para enums e constraints, `create index
@@ -453,11 +464,11 @@ Não confundir com `barbershops.whatsapp` (contato da loja, só link `wa.me` —
 `linkWhatsApp()`, `src/lib/suporte.ts`, `src/lib/config.ts`) nem com
 `notifications` (sininho).
 
-### Os três eventos (só Utilidade)
+### Os eventos (só Utilidade) — em uso: lembrete e cancelamento
 
 | Evento | Quando | Onde nasce | Template |
 |---|---|---|---|
-| `confirmation` | Agendou pelo app (`agendar`) ou pelo link público (`agendarSemLogin`) | Server Action → `avisarPorWhatsapp` | `pibarber_confirmacao_v1` |
+| ~~`confirmation`~~ | **Desligada em 2026-09-30** (decisão do negócio): a confirmação vai por e-mail; o template continua no catálogo, fora de `EVENTOS` | — | `pibarber_confirmacao_v1` |
 | `reminder` | 18h da véspera (ou já, se esse instante passou) | Cron → `varrerLembretes` | `pibarber_lembrete_v1` |
 | `cancellation` | Cancelou pelo painel (`cancelarAgendamento`), pelo app (`cancelarMeuAgendamento`) ou pelo link (`cancelarPorToken`) | Server Action → `avisarPorWhatsapp` | `pibarber_cancelamento_v1` |
 
@@ -553,6 +564,7 @@ Classificação de erro (transitório ou não) em `classificarErro()`,
 |---|---|---|
 | 01 | WhatsApp oficial (Meta Cloud API): outbox, templates, webhook, cron | ✅ código entregue — ativação em produção pendente (ver abaixo) |
 | 02 | Setup guiado, assinaturas (Asaas), super admin, relatos, duas portas de login | ✅ entregue na `feat/setup-barbearia` — migrações 28–30 pendentes em produção (ver abaixo) |
+| 02b | E-mails com Resend: avisos ao dono e ao cliente, lembrete de voltar, "Esqueci minha senha" | ✅ código e migração 31 no dev — falta domínio/chave do Resend, SMTP no Supabase e o cron (§15) |
 
 > Cada agente acrescenta a própria linha aqui e um bloco "O que o agente N
 > entregou" ao final deste arquivo, no mesmo formato: o que era, o que ficou, o
@@ -603,8 +615,9 @@ Criadas pelo agente 02:
 - **(f) Estorno é manual fora do /admin.** O botão de estorno do /admin chama
   o Asaas; devolução pedida por outro canal é feita no painel do Asaas e
   registrada como `external_refund`.
-- **(g) Sem avisos por e-mail.** Teste acabando, fatura vencida e renovação do
-  parcelado só aparecem na tela. Próximo passo planejado: Resend.
+- **(g) E-mails dependem do cron** (lembrete, cobrança, lembrete de voltar):
+  sem o `cron.schedule` de `docs/emails.md` §5, só saem os avisos imediatos de
+  agendar/cancelar. O aviso de pagamento também vem do cron (até 5 min).
 - **(h) A regra do lado cliente mora em dois lugares:** `meus_agendamentos_ids()`
   e `client_home` (30). Mudou uma, mude a outra.
 - **(i) Excluir conta** só existe para quem é só cliente; quem tem barbearia
@@ -671,6 +684,37 @@ sem falar com o dono do produto.** Resumo:
   assistente), com print opcional no bucket privado `feedbacks` (caminho sempre
   `<shopId>/…`, `upsert: false`). Limite por loja em `feedbacks_limite`. A
   lista fica só em `/admin/feedbacks`; a resposta é pelo WhatsApp.
+
+## 15. E-mails (Resend)
+
+Configuração do zero em **`docs/emails.md`**. Dois caminhos:
+
+- **Auth** (confirmação de cadastro, "Esqueci minha senha"): quem manda é o
+  Supabase, com o Resend como **SMTP**. Os modelos (`supabase/emails/`) levam
+  `{{ .RedirectTo }}&token_hash=…` → `/callback` faz `verifyOtp`, o que
+  funciona em qualquer aparelho (o `code` do PKCE só no navegador que pediu).
+- **Avisos**: fila `email_messages` (31), mesmo desenho do WhatsApp — linha
+  primeiro, `after()` para o envio imediato, `/api/cron/emails` a cada 5 min
+  para o resto. `dedupe_key` única = idempotência. O texto é montado na hora
+  do envio (`modelos.ts`); a linha guarda tipo + parâmetros.
+
+| Para | E-mail | Origem |
+|---|---|---|
+| Dono | agendamento novo, cliente cancelou (interruptores em Configurações) | `avisarPorEmail` nas actions `agendar`, `agendarSemLogin`, `cancelarMeuAgendamento`, `cancelarPorToken` |
+| Dono | teste acaba em 3d/1d, agenda pausada, fatura vencida, pagamento, renovar parcelado | cron → `email_cobranca_pendente()` |
+| Cliente | confirmação; cancelamento pela loja | `avisarPorEmail` em `agendar`/`agendarSemLogin`/`cancelarAgendamento` |
+| Cliente | lembrete às 18h da véspera | cron → `email_lembretes_pendentes()` (não usa `reminder_sent_at`, que é do WhatsApp) |
+| Cliente | vaga na fila de espera, convite para avaliar | cron → `email_notificacoes_pendentes()` (o sininho vira e-mail) |
+| Cliente | **lembrete de voltar** (marketing) | cron → `email_recorrencia_candidatos()` |
+
+- **E-mail do cliente** = `email_do_cliente()`: conta da ficha → conta de quem
+  marcou online (nunca o dono/assistente da loja) → e-mail da ficha.
+- **Lembrete de voltar:** ligado por padrão, a loja desliga; o intervalo é da
+  plataforma (`platform_settings.recorrencia_dias`, padrão 21, editado em
+  `/admin/emails`). Uma vez por visita, só sem horário marcado, até 30 dias
+  depois do prazo, entre 9h e 20h. Descadastro por `/sair/<id da linha>` e
+  `List-Unsubscribe` de um clique; `email_opt_outs` por loja ou de todas.
+- Sem `RESEND_API_KEY` nada entra na fila (o dev roda sem).
 
 ---
 

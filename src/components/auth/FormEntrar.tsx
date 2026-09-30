@@ -1,6 +1,7 @@
 "use client";
 
 import { Eye, EyeOff } from "lucide-react";
+import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 
 import { entrar } from "@/app/actions/auth";
@@ -147,6 +148,13 @@ export function FormEntrar({
           }
         />
       </Field>
+
+      <Link
+        href={lado === "barbearia" ? "/esqueci-senha?tipo=barbearia" : "/esqueci-senha"}
+        className="-mt-2 self-end text-sm font-medium text-brass hover:text-brass-deep"
+      >
+        Esqueci minha senha
+      </Link>
 
       <Button type="submit" tamanho="lg" larguraTotal carregando={enviando}>
         Entrar

@@ -164,7 +164,9 @@ export const config = {
      *                                pagaria um getUser() de ida e volta ao
      *                                Supabase à toa — e o webhook da Meta
      *                                tem prazo curto para receber o 200.
+     *   api/emails                 → descadastro de um clique, chamado pelo
+     *                                Gmail sem sessão.
      */
-    "/((?!_next/static|_next/image|api/webhooks|api/cron|favicon.ico|manifest.webmanifest|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|api/webhooks|api/cron|api/emails|favicon.ico|manifest.webmanifest|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

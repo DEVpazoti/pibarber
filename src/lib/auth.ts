@@ -286,6 +286,9 @@ export async function requireOwnerContext(): Promise<ShopContext> {
  */
 export const ROTA_EMAIL_CONFIRMADO = "/email-confirmado";
 
+/** Para onde o link do e-mail de "Esqueci minha senha" leva, já com sessão. */
+export const ROTA_REDEFINIR_SENHA = "/redefinir-senha";
+
 /** A casa de cada papel, usada depois do login e em todo redirect de acesso. */
 export function rotaInicial(perfil: Pick<Profile, "role" | "is_platform_admin">): string {
   if (perfil.is_platform_admin) return "/admin";

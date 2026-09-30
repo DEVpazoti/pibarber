@@ -32,7 +32,7 @@ export const metadata: Metadata = {
 };
 
 /** Atualize junto com o texto. É a data que o rodapé e a lei pedem. */
-const ATUALIZADO_EM = "23 de setembro de 2026";
+const ATUALIZADO_EM = "24 de setembro de 2026";
 
 export default function PoliticaDePrivacidade() {
   const suporte = dadosSuporte();
@@ -154,7 +154,8 @@ export default function PoliticaDePrivacidade() {
             </li>
             <li>
               <strong className="text-ink">Para avisar você</strong> sobre os seus horários:
-              confirmação, lembrete e cancelamento, pelo aplicativo e pelo WhatsApp (item 5).
+              confirmação, lembrete e cancelamento, pelo aplicativo, pelo WhatsApp e por e-mail
+              (item 5).
             </li>
             <li>
               <strong className="text-ink">Para proteger a plataforma</strong>: conter robôs e
@@ -172,8 +173,9 @@ export default function PoliticaDePrivacidade() {
           <P>
             As bases legais são, conforme o caso, a execução do contrato entre você e o {MARCA.nome}
             , o cumprimento de obrigação legal, o legítimo interesse (segurança e prevenção a
-            fraude) e o seu consentimento — este último para a localização e para as mensagens de
-            WhatsApp, que você pode retirar quando quiser.
+            fraude, e o lembrete de voltar à barbearia em que você já foi atendido) e o seu
+            consentimento — este último para a localização e para as mensagens de WhatsApp, que você
+            pode retirar quando quiser.
           </P>
         </Secao>
 
@@ -203,6 +205,10 @@ export default function PoliticaDePrivacidade() {
               mensagem, quando enviamos um aviso de agendamento. Ver o item 5.
             </li>
             <li>
+              <strong className="text-ink">Resend</strong> — o seu e-mail e o conteúdo do aviso,
+              quando mandamos um e-mail (item 5).
+            </li>
+            <li>
               <strong className="text-ink">Asaas</strong> — só para barbearias que assinam um plano:
               nome da barbearia, CPF ou CNPJ de quem paga, e-mail e celular do dono, para gerar e
               cobrar as faturas. O pagamento com cartão ou Pix acontece na página do próprio Asaas.
@@ -226,16 +232,13 @@ export default function PoliticaDePrivacidade() {
           </P>
         </Secao>
 
-        <Secao titulo="5. As mensagens de WhatsApp">
+        <Secao titulo="5. As mensagens de WhatsApp e os e-mails">
           <P>
             O {MARCA.nome} envia mensagens pelo WhatsApp usando a API oficial da Meta. Elas partem
             do <strong className="text-ink">número da plataforma</strong>, não do número da
             barbearia, e são sempre sobre um horário seu:
           </P>
           <Lista>
-            <li>
-              <strong className="text-ink">Confirmação</strong>, quando você agenda;
-            </li>
             <li>
               <strong className="text-ink">Lembrete</strong>, na véspera do atendimento;
             </li>
@@ -257,6 +260,20 @@ export default function PoliticaDePrivacidade() {
           <P>
             Registramos se a mensagem foi entregue e lida, para saber se o aviso chegou. Não lemos e
             não guardamos o conteúdo de outras mensagens que você mandar para esse número.
+          </P>
+          <P>
+            <strong className="text-ink">Por e-mail</strong>, quem tem e-mail na conta (ou na ficha
+            da barbearia) recebe os mesmos avisos do horário, o convite para avaliar o atendimento e
+            o aviso de vaga na fila de espera. O dono da barbearia recebe os avisos da própria
+            agenda e da assinatura.
+          </P>
+          <P>
+            Você também pode receber um <strong className="text-ink">lembrete de voltar</strong>{" "}
+            algumas semanas depois do seu último atendimento nela (a barbearia pode desligar) — um
+            por visita, e nunca se você já tiver horário marcado. Todo lembrete de voltar traz o
+            link <strong className="text-ink">“Não quero mais receber”</strong>: um clique e você
+            sai, daquela barbearia ou de todas. Os avisos dos horários que você marcar continuam
+            chegando.
           </P>
         </Secao>
 

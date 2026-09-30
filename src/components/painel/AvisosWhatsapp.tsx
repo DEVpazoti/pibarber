@@ -34,8 +34,10 @@ import { STATUS_MENSAGEM, templateIndisponivel } from "@/lib/whatsapp/rotulos";
 export function AvisosWhatsapp({ painel }: { painel: PainelWhatsapp }) {
   const router = useRouter();
 
+  // `confirmation` fica só para o tipo fechar: ela não aparece na tela nem é
+  // salva (saiu em 2026-09-30 — ver EVENTOS em src/lib/whatsapp/catalogo.ts).
   const [ligados, setLigados] = useState<Record<WhatsappEvent, boolean>>(() => ({
-    confirmation: painel.eventos.find((e) => e.evento === "confirmation")?.ligado ?? true,
+    confirmation: false,
     reminder: painel.eventos.find((e) => e.evento === "reminder")?.ligado ?? true,
     cancellation: painel.eventos.find((e) => e.evento === "cancellation")?.ligado ?? true,
   }));
@@ -71,9 +73,8 @@ export function AvisosWhatsapp({ painel }: { painel: PainelWhatsapp }) {
 
       {!painel.integracaoAtiva ? (
         <p className="flex items-start gap-2 rounded-card bg-surface-2 p-3 text-sm text-ink-soft">
-          <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-          O envio de mensagens ainda não está ativo. Suas escolhas ficam salvas e passam a valer
-          assim que for ligado.
+          <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />O envio de mensagens ainda não
+          está ativo. Suas escolhas ficam salvas e passam a valer assim que for ligado.
         </p>
       ) : null}
 
@@ -113,7 +114,10 @@ export function AvisosWhatsapp({ painel }: { painel: PainelWhatsapp }) {
                   ) : null}
                 </p>
               ) : (
-                <label htmlFor={campo} className="flex min-h-[44px] cursor-pointer items-center gap-3">
+                <label
+                  htmlFor={campo}
+                  className="flex min-h-[44px] cursor-pointer items-center gap-3"
+                >
                   <input
                     id={campo}
                     type="checkbox"
