@@ -123,8 +123,14 @@ painel.
 
 Era o que evitava o erro `131042` em todo envio.
 
-### 7. ✅ Templates aprovados — FEITO (19/09)
-- [x] Os três em **APPROVED** na Meta e já sincronizados no banco
+### 7. Templates
+- [x] `pibarber_confirmacao_v1` e `pibarber_cancelamento_v1` — **APPROVED**
+- [ ] `pibarber_lembrete_v2` — submetido em 22/09, **em análise**
+
+O v1 do lembrete dizia "amanhã" para um atendimento de hoje (bug visto em
+produção). O v2 recebe o dia como parâmetro. **Enquanto ele não for aprovado,
+nenhum lembrete é enviado** — confirmação e cancelamento seguem normais.
+Conferir: `node --no-warnings scripts/whatsapp-templates.mjs --listar`
 
 De minutos a 2 dias. **Enquanto estiverem PENDING, nenhuma mensagem sai** — e
 a tela do dono mostra "Em análise pela Meta", não erro.
