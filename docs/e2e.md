@@ -43,7 +43,7 @@ O que vem de fora é simulado:
 - **Localização do setup**: GPS simulado do navegador.
 - **WhatsApp e Google Maps**: desligados.
 
-## O que está coberto (fases 1 e 2 — 33 testes, ~3,5 min)
+## O que está coberto (fases 1 a 3 — 41 testes)
 
 | Arquivo | Fluxos |
 |---|---|
@@ -53,8 +53,16 @@ O que vem de fora é simulado:
 | `assinatura.spec.ts` | teste vencido pausa painel e página pública; pagamento pelo webhook libera; aviso de teste acabando (uma vez só); webhook e cron sem segredo recusados |
 | `painel.spec.ts` (fase 2) | encaixe pelo balcão; concluir no Pix (caixa + comissão) e pagar a comissão; falta; cancelar pelo painel (+ e-mail ao cliente); fiado concluído e recebido; pendências concluídas em lote; limite do plano Solo na equipe; lista de espera (com nome e contato) |
 
-Próximas fases (ainda não feitas): segurança (assistente sem dinheiro, "ver
-como o dono" só leitura, dono pelo lado cliente), /admin e o lembrete de voltar.
+| `seguranca.spec.ts` (fase 3) | assistente sem itens de dinheiro, na tela e na API; "ver como o dono" só leitura e auditado; dono pelo lado cliente não vê a agenda da loja; dono não lê/altera outra loja; cliente não lê outro cliente; chave pública sem login não lê nada privado; cliente fora do painel e do /admin |
+
+Os testes de segurança chamam a API do Supabase **direto** (`apiComo`,
+`apiAnonima`), como faria alguém com o DevTools aberto — é a RLS que está sendo
+testada, não a tela. Cada "não vê" tem uma **prova de controle**: a mesma
+consulta, feita por quem pode, acha o dado. Sem ela, um vazio podia ser só uma
+consulta quebrada.
+
+Próxima fase (ainda não feita): /admin (métricas, ficha, estorno, relatos) e o
+lembrete de voltar.
 
 ## Escrevendo um teste novo
 
