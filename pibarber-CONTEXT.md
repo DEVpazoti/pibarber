@@ -490,8 +490,8 @@ select e "Meus agendamentos" e o Histórico mostram "Não consegui carregar"
 > - **Ordem obrigatória de deploy (vale para qualquer banco):** aplicar a 34 ANTES
 >   do código. A 34 é compatível com o código antigo; o código novo NÃO é
 >   compatível com banco sem a 34 — o dev precisa da 34 antes de rodar esta versão.
-> - `database.types.ts` teve a entrada `encerrado` acrescentada **à mão** (sem
->   credencial de dev para regerar): conferir ao regerar.
+> - `database.types.ts` foi **regerado do banco de produção em 01/10/2026**,
+>   depois da 35 e da 36 — as entradas escritas à mão (34, 35, 36) bateram.
 
 **Detalhe do agendamento: os dados vêm com a PÁGINA, não de uma action.** O
 painel lateral de `/painel` e `/painel/agenda` (`AppointmentSheet`) mostra a
@@ -502,11 +502,10 @@ recusa TODA action, inclusive de leitura. Para o assistente, `total_spent` sai
 do select (não é só escondido). A foto de OUTRA pessoa vem de
 `fotos_dos_clientes()` (36), não de embed em `profiles` (que volta nulo).
 
-> ⚠️ **ESTADO DA 36 (01/10/2026):** **NÃO aplicada em produção NEM em dev.**
-> `database.types.ts` recebeu `fotos_dos_clientes` **à mão** (sem credencial de
-> dev): conferir ao regerar. E2E escrito e **não rodado** (máquina sem Docker).
-> **Ordem de deploy:** aplicar a 36 ANTES do merge — sem ela o RPC falha, o
-> detalhe abre sem foto (só iniciais) e o log acusa o erro; nada mais quebra.
+> ⚠️ **ESTADO DA 36 (01/10/2026):** **aplicada em PRODUÇÃO em 01/10/2026**, antes
+> do merge (portão passou). **NÃO aplicada em dev. E2E escrito e NÃO rodado**
+> (máquina sem Docker). Num banco sem a 36, o RPC falha, o detalhe abre sem foto
+> (só iniciais) e o log acusa o erro; nada mais quebra.
 
 **Coluna nova em `barbershops` é PÚBLICA.** `grant select on barbershops to
 anon` (03) vale para a tabela inteira, e não dá para revogar uma coluna só de
@@ -518,15 +517,12 @@ quem tem o grant da tabela. Dado interno da loja vai em tabela própria, como
 inteira em `begin/commit`, os grants recriados e um portão conferindo que só
 `authenticated` executa e que a checagem de `is_platform_admin()` continua lá.
 
-> ⚠️ **ESTADO DA 35 (01/10/2026):** **NÃO aplicada em produção NEM em dev.**
-> `database.types.ts` recebeu `barbershop_acquisition`, `salvar_como_conheceu` e
-> as duas colunas novas de `admin_barbearias` **à mão** (sem credencial de dev):
-> conferir ao regerar. O SQL foi validado num Postgres em memória (PGlite) com
-> stubs — 33 checagens, incluindo rodar duas vezes. E2E escrito e **não rodado**
-> (máquina sem Docker). **Ordem de deploy: aplicar a 35 ANTES do merge** — sem
-> ela a etapa 1 do setup NÃO AVANÇA (o RPC não existe) — nenhuma loja nova
-> consegue terminar o cadastro. O /admin não quebra: mostra "Não informado"
-> para todas.
+> ⚠️ **ESTADO DA 35 (01/10/2026):** **aplicada em PRODUÇÃO em 01/10/2026**, antes
+> do merge (portão passou; antes do `drop`, o corpo de `admin_barbearias` em
+> produção foi conferido igual ao da 29). **NÃO aplicada em dev. E2E escrito e
+> NÃO rodado** (máquina sem Docker). O SQL foi validado antes num Postgres em
+> memória (PGlite) — 33 checagens. **Num banco sem a 35, a etapa 1 do setup NÃO
+> AVANÇA** (o RPC não existe): o dev precisa da 35 antes de rodar esta versão.
 
 **Pix em assinatura do Asaas vira boleto híbrido** (boleto com QR Pix). Pix
 compensa na hora; o boleto leva até 3 dias úteis. Decisão: aceitar e avisar
