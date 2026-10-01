@@ -7,6 +7,7 @@ import { AcoesDaFicha, NotasInternas, type Nota } from "@/components/admin/Ficha
 import { ChipSituacao } from "@/components/admin/ListaBarbearias";
 import { Card, StatCard } from "@/components/ui";
 import type { LinhaBarbearia } from "@/lib/admin";
+import { rotuloComoConheceu } from "@/lib/como-conheceu";
 import { rotuloDoCiclo } from "@/lib/assinatura";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -194,6 +195,13 @@ export default async function FichaPage({ params }: { params: Promise<{ id: stri
               <span className="text-ink-faint">Sem celular cadastrado</span>
             )}
           </div>
+          {/* Respondido na etapa 1 do setup (35_como_conheceu.sql). */}
+          <p className="mt-3 border-t border-line pt-3 text-sm">
+            <span className="text-ink-soft">Como conheceu o PiBarber: </span>
+            <span className="text-ink">
+              {rotuloComoConheceu(l.como_conheceu, l.como_conheceu_detalhe)}
+            </span>
+          </p>
         </Card>
 
         {/* ---------- Assinatura ---------- */}

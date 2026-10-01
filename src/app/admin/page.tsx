@@ -11,6 +11,7 @@ import Link from "next/link";
 
 import { PageHeader, StatCard } from "@/components/ui";
 import { variacao, type LinhaBarbearia } from "@/lib/admin";
+import { CANAIS, ehCanal, NAO_INFORMADO, ROTULO_CANAL } from "@/lib/como-conheceu";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { brl, cn, dataBR, dataHoraBR, diaBR, one } from "@/lib/utils";
@@ -77,6 +78,21 @@ export default async function VisaoGeralPage() {
     (l) => l.situacao === "setup" && agora - new Date(l.created_at).getTime() > 2 * DIA,
   );
   const faturasVencidas = vencidas.data ?? [];
+
+  // --- Como conheceram ------------------------------------------------------
+  // Contado da lista que já veio de admin_barbearias(): sem consulta a mais.
+  const porCanal = [
+    ...CANAIS.map((c) => ({
+      rotulo: ROTULO_CANAL[c],
+      total: lojas.filter((l) => l.como_conheceu === c).length,
+      informado: true,
+    })),
+    {
+      rotulo: NAO_INFORMADO,
+      total: lojas.filter((l) => !ehCanal(l.como_conheceu)).length,
+      informado: false,
+    },
+  ];
 
   const conversao =
     m.testes_encerrados_30d > 0
@@ -228,6 +244,8 @@ export default async function VisaoGeralPage() {
         )}
       </section>
 
+      <ComoConheceram linhas={porCanal} total={lojas.length} />
+
       <p className="mt-6 flex items-center gap-1.5 text-xs text-ink-faint">
         <Clock className="h-3.5 w-3.5" aria-hidden />
         “Mês” é o mês do calendário, no horário de Brasília.
@@ -276,6 +294,61 @@ function ItemLoja({ id, nome, children }: { id: string; nome: string; children: 
         <span className="tnum shrink-0 text-xs text-ink-soft">{children}</span>
       </Link>
     </li>
+  );
+}
+
+/**
+ * "Como conheceram o PiBarber": uma barra por canal, com o número e o % por
+ * escrito ao lado (a barra só reforça — o texto é a informação). Os canais
+ * em latão; "Não informado" em cinza, porque é falta de dado, não um canal.
+ * A ordem é a da pergunta, fixa, para o olho achar o mesmo canal no mesmo
+ * lugar de uma visita para a outra.
+ */
+function ComoConheceram({
+  linhas,
+  total,
+}: {
+  linhas: { rotulo: string; total: number; informado: boolean }[];
+  total: number;
+}) {
+  const maior = Math.max(1, ...linhas.map((l) => l.total));
+
+  return (
+    <section className="mt-8">
+      <h2 className="text-lg font-semibold text-ink">Como conheceram o PiBarber</h2>
+      <p className="mt-0.5 text-sm text-ink-soft">
+        Resposta do dono na etapa 1 do setup. Lojas de antes da pergunta ficam em “Não
+        informado”.
+      </p>
+
+      <ul className="mt-3 flex flex-col gap-2.5 rounded-card border border-line bg-surface p-4">
+        {linhas.map((l) => {
+          const pctDoTotal = total > 0 ? Math.round((l.total / total) * 100) : 0;
+          return (
+            <li
+              key={l.rotulo}
+              className="grid grid-cols-[minmax(0,11rem)_1fr_auto] items-center gap-3 sm:grid-cols-[16rem_1fr_auto]"
+            >
+              <span className={cn("truncate text-sm", l.informado ? "text-ink" : "text-ink-soft")}>
+                {l.rotulo}
+              </span>
+              <span className="h-2 rounded-full bg-surface-2" aria-hidden>
+                <span
+                  className={cn(
+                    "block h-2 rounded-full",
+                    l.informado ? "bg-brass" : "bg-line-strong",
+                  )}
+                  style={{ width: `${(l.total / maior) * 100}%` }}
+                />
+              </span>
+              <span className="tnum w-20 text-right text-sm text-ink">
+                {l.total} <span className="text-ink-soft">· {pctDoTotal}%</span>
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

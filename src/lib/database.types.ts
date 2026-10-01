@@ -276,6 +276,38 @@ export type Database = {
           },
         ]
       }
+      barbershop_acquisition: {
+        Row: {
+          barbershop_id: string
+          created_at: string
+          detail: string | null
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          barbershop_id: string
+          created_at?: string
+          detail?: string | null
+          source: string
+          updated_at?: string
+        }
+        Update: {
+          barbershop_id?: string
+          created_at?: string
+          detail?: string | null
+          source?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "barbershop_acquisition_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: true
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       barbershop_amenities: {
         Row: {
           amenity_id: string
@@ -2041,6 +2073,8 @@ export type Database = {
           ciclo: string
           city: string
           clientes: number
+          como_conheceu: string
+          como_conheceu_detalhe: string
           created_at: string
           dono_email: string
           dono_nome: string
@@ -2349,6 +2383,10 @@ export type Database = {
       reverter_status_agendamento: {
         Args: { p_appointment: string }
         Returns: string
+      }
+      salvar_como_conheceu: {
+        Args: { p_detail: string; p_shop: string; p_source: string }
+        Returns: undefined
       }
       search_barbershops: {
         Args: {

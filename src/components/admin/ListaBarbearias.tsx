@@ -9,6 +9,7 @@ import { NovaBarbeariaDialog } from "@/components/admin/AdminPainel";
 import { Button, Chip, EmptyState, Input, Select } from "@/components/ui";
 import { SITUACOES, situacao, type LinhaBarbearia, type SituacaoBarbearia } from "@/lib/admin";
 import { rotuloDoCiclo } from "@/lib/assinatura";
+import { CANAIS, ehCanal, rotuloComoConheceu, ROTULO_CANAL } from "@/lib/como-conheceu";
 import type { SubscriptionCycle } from "@/lib/types";
 import { dataBR } from "@/lib/utils";
 
@@ -21,6 +22,8 @@ export function ListaBarbearias({ linhas }: { linhas: LinhaBarbearia[] }) {
   const [busca, setBusca] = useState("");
   const [filtroSituacao, setFiltroSituacao] = useState<"todas" | SituacaoBarbearia>("todas");
   const [filtroPlano, setFiltroPlano] = useState("todos");
+  // "todos", um canal, ou "nao_informado" (lojas de antes da pergunta).
+  const [filtroCanal, setFiltroCanal] = useState("todos");
   const [nova, setNova] = useState(false);
 
   const planos = useMemo(
@@ -36,12 +39,20 @@ export function ListaBarbearias({ linhas }: { linhas: LinhaBarbearia[] }) {
       if (filtroPlano !== "todos" && filtroPlano !== "sem" && l.plano_nome !== filtroPlano) {
         return false;
       }
+      if (filtroCanal === "nao_informado" && ehCanal(l.como_conheceu)) return false;
+      if (
+        filtroCanal !== "todos" &&
+        filtroCanal !== "nao_informado" &&
+        l.como_conheceu !== filtroCanal
+      ) {
+        return false;
+      }
       if (!termo) return true;
       return [l.name, l.dono_nome, l.dono_email, l.city, l.slug]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(termo));
     });
-  }, [linhas, busca, filtroSituacao, filtroPlano]);
+  }, [linhas, busca, filtroSituacao, filtroPlano, filtroCanal]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -80,6 +91,19 @@ export function ListaBarbearias({ linhas }: { linhas: LinhaBarbearia[] }) {
               </option>
             ))}
             <option value="sem">Sem plano pago</option>
+          </Select>
+          <Select
+            value={filtroCanal}
+            onChange={(e) => setFiltroCanal(e.target.value)}
+            aria-label="Filtrar por como conheceu"
+          >
+            <option value="todos">Todos os canais</option>
+            {CANAIS.map((c) => (
+              <option key={c} value={c}>
+                {ROTULO_CANAL[c]}
+              </option>
+            ))}
+            <option value="nao_informado">Não informado</option>
           </Select>
         </div>
         <div className="flex gap-2">
@@ -236,6 +260,7 @@ function exportarCsv(linhas: LinhaBarbearia[]) {
     ["Clientes", (l) => l.clientes],
     ["Nota", (l) => (l.avaliacoes ? String(l.nota).replace(".", ",") : "")],
     ["Criada em", (l) => dataBR(l.created_at)],
+    ["Como conheceu", (l) => rotuloComoConheceu(l.como_conheceu, l.como_conheceu_detalhe)],
   ];
 
   const celula = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
