@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 
 import { AppointmentCard } from "@/components/client/AppointmentCard";
 import { EmptyState, LinkButton, Select } from "@/components/ui";
-import { emAberto, type MeuAgendamento } from "@/lib/types";
+import { emAbertoParaOCliente, type MeuAgendamento } from "@/lib/types";
 
 /**
  * "Meus Agendamentos" — a prova de que isto é um marketplace.
@@ -27,8 +27,10 @@ export function ListaAgendamentos({ agendamentos }: { agendamentos: MeuAgendamen
 
   const filtrados = loja === "" ? agendamentos : agendamentos.filter((a) => a.barbearia?.id === loja);
 
-  const abertos = filtrados.filter((a) => emAberto(a.status));
-  const anteriores = filtrados.filter((a) => !emAberto(a.status));
+  // Não basta o status: um horário que o barbeiro nunca concluiu continua
+  // `scheduled` no banco, e sem o `encerrado` ficaria "em aberto" para sempre.
+  const abertos = filtrados.filter(emAbertoParaOCliente);
+  const anteriores = filtrados.filter((a) => !emAbertoParaOCliente(a));
 
   return (
     <div className="flex flex-col gap-5">

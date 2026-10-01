@@ -2266,6 +2266,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      encerrado: {
+        Args: { "": Database["public"]["Tables"]["appointments"]["Row"] }
+        Returns: boolean
+      }
       get_available_slots: {
         Args: { p_dia: string; p_duracao?: number; p_professional: string }
         Returns: {

@@ -69,6 +69,15 @@ entrou**, guardada no cookie `pibarber-lado` (`src/lib/lado.ts`):
   `meus_agendamentos_ids()` (30): ficha ligada ao perfil, ou marcado online
   pela pessoa FORA da loja em que ela trabalha. `client_home`, a lista, o
   histórico, avaliar e cancelar pelo app usam essa regra.
+- **"Em aberto" no lado cliente NÃO é só o status (34).** Atendimento
+  `scheduled`/`confirmed` cujo fim passou há mais de 1h é **"Encerrado"** para o
+  cliente: sai de "Em aberto" e do Início, vai para "Anteriores", chip neutro,
+  só "Agendar de novo". A regra é o campo calculado `encerrado(appointments)`
+  (o app pede `encerrado` no select; `client_home` usa `not encerrado(a)`). **O
+  status no banco NÃO muda** — o barbeiro resolve em `/painel/pendencias`. O
+  painel continua usando `emAberto()`; o lado cliente usa
+  `emAbertoParaOCliente()` (`src/lib/types.ts`). A janela de 1h é a mesma do
+  `token_ainda_vale()` (20): mudou uma, reveja a outra.
 
 ---
 
@@ -212,13 +221,14 @@ isolada com o env de produção. **Produção só com autorização explícita.*
 31_emails                email_messages, email_opt_outs, platform_settings, interruptores de e-mail
 32_lista_espera_contato  contatos_da_lista_de_espera(): nome e celular da fila para quem é da loja
 33_lembrete_de_quem_marca_tarde  quem marca depois das 18h da véspera volta a receber o lembrete do WhatsApp
+34_encerrado_para_o_cliente      encerrado(appointments): passou 1h do fim sem conclusão → "Encerrado" no app; client_home usa a regra
 ```
 
 ⚠️ **Há duas migrações `25_`:** `25_lembrete_diz_o_dia.sql` (agente do WhatsApp,
 22/09) e `25_setup_barbearia.sql`. Rodam nessa ordem (alfabética) e não
 dependem uma da outra. A 33 desfaz uma regra da `25_lembrete_…` — ver lá.
 
-**A próxima migração é a `34_`.** Os modelos de e-mail do Supabase Auth ficam
+**A próxima migração é a `35_`.** Os modelos de e-mail do Supabase Auth ficam
 em `supabase/emails/*.html` (colados à mão no painel — `docs/emails.md`). Regras para escrever uma:
 
 - Idempotente de ponta a ponta. `create table if not exists`, `do $$ ... exception
@@ -457,6 +467,22 @@ Pare o dev, rode o build, apague `.next` e suba o dev de novo.
 agenda da loja; qualquer tela de cliente que confie só na RLS mostra os
 horários da barbearia como se fossem dele. Use `meus_agendamentos_ids()`.
 
+**Deploy da 34 vai NA ORDEM: migração antes do código.** `carregarMeusAgendamentos`
+pede o campo calculado `encerrado`; num banco sem a 34, o PostgREST recusa o
+select e "Meus agendamentos" e o Histórico mostram "Não consegui carregar"
+(`ErroAoCarregar`) para TODO cliente. Desde a 34, essa consulta devolve
+`ActionResult` — erro nunca vira lista vazia.
+
+> ⚠️ **ESTADO DA 34 (branch `fix/encerrado-no-app`, 30/09/2026):**
+> - **Migração 34 NÃO aplicada em dev nem em produção. E2E NÃO rodou.** O SQL
+>   foi validado só num Postgres em memória (PGlite) com stubs das tabelas;
+>   typecheck e lint verdes.
+> - **Ordem obrigatória de deploy: aplicar a 34 em produção ANTES do merge.** A
+>   34 é compatível com o código antigo; o código novo NÃO é compatível com
+>   banco sem a 34.
+> - `database.types.ts` teve a entrada `encerrado` acrescentada **à mão** (sem
+>   credencial de dev para regerar): conferir ao regerar.
+
 **Pix em assinatura do Asaas vira boleto híbrido** (boleto com QR Pix). Pix
 compensa na hora; o boleto leva até 3 dias úteis. Decisão: aceitar e avisar
 na tela.
@@ -589,7 +615,7 @@ Classificação de erro (transitório ou não) em `classificarErro()`,
 
 ## 11. Dívidas técnicas conhecidas
 
-- Testes E2E cobrem as fases 1 a 4 (`docs/e2e.md`, 52 testes). Ficam de fora
+- Testes E2E cobrem as fases 1 a 4 (`docs/e2e.md`, 58 testes). Ficam de fora
   só os fluxos que chamam a API do Asaas: assinar, estorno e cancelamento pelo
   /admin — esses, à mão no sandbox. Sem CI ainda (GitHub Actions).
 - `AUDITORIA_BUGS.md` e `AUDITORIA_SEGURANCA.md` listam achados; conferir se o

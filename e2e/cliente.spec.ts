@@ -1,11 +1,45 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { celularUnico, criarBarbeariaPronta, criarCliente, entrar, executar, sql } from "./apoio";
+import {
+  celularUnico,
+  criarBarbeariaPronta,
+  criarCliente,
+  entrar,
+  executar,
+  sql,
+  type Conta,
+  type Loja,
+} from "./apoio";
 
 /**
  * O CLIENTE — o que paga a conta de todo mundo: achar a barbearia, agendar,
  * cancelar e avaliar. Roda também no projeto "celular" (playwright.config.ts).
  */
+
+/** A ficha do cliente NA loja, ligada à conta dele — é o que o faz "meu" no app. */
+function fichaDoCliente(loja: Loja, cliente: Conta): string {
+  const [ficha] = sql<{ id: string }>(`
+    insert into customers (barbershop_id, profile_id, full_name, phone)
+    values ('${loja.id}', '${cliente.id}', '${cliente.nome}', '${cliente.telefone}') returning id`);
+  return ficha!.id;
+}
+
+/**
+ * Um atendimento ainda `scheduled` na ficha, com início e fim em SQL
+ * (`now() - interval '…'`) — o "agora" é o do banco, o mesmo que a regra de
+ * `encerrado` (34_encerrado_para_o_cliente.sql) usa.
+ */
+function atendimentoNaFicha(loja: Loja, ficha: string, inicio: string, fim: string): string {
+  const [ag] = sql<{ id: string }>(`
+    insert into appointments (barbershop_id, professional_id, customer_id, starts_at, ends_at,
+      status, total_price, source)
+    values ('${loja.id}', '${loja.profissionalId}', '${ficha}', ${inicio}, ${fim},
+      'scheduled', 40, 'manual')
+    returning id`);
+  executar(`insert into appointment_services (appointment_id, service_id, price, duration_minutes)
+            values ('${ag!.id}', '${loja.servicoId}', 40, 30)`);
+  return ag!.id;
+}
 
 /** Percorre o assistente até a confirmação: serviço → quem → amanhã, 1º horário. */
 async function escolherHorario(page: Page, servico: string) {
@@ -150,6 +184,94 @@ test.describe("Cliente", () => {
       )
       .toBe(1);
     await expect(page.getByRole("button", { name: "Avaliar" })).toHaveCount(0);
+  });
+
+  test("horário que passou sem a barbearia resolver vira Encerrado — e continua pendente no painel", async ({
+    page,
+  }) => {
+    const loja = await criarBarbeariaPronta();
+    const cliente = await criarCliente("Elisa Esquecida");
+    const ficha = fichaDoCliente(loja, cliente);
+    // Ontem, 09:00–09:30: acabou há bem mais de 1 hora, e é de um dia ANTERIOR
+    // — que é o que /painel/pendencias lista (src/lib/queries/agenda.ts).
+    const id = atendimentoNaFicha(
+      loja,
+      ficha,
+      `((now() at time zone 'America/Sao_Paulo')::date - 1 + time '09:00') at time zone 'America/Sao_Paulo'`,
+      `((now() at time zone 'America/Sao_Paulo')::date - 1 + time '09:30') at time zone 'America/Sao_Paulo'`,
+    );
+
+    await entrar(page, cliente.email, "cliente");
+
+    // Início: não é "seu próximo horário".
+    await page.goto("/app");
+    await expect(page.getByRole("heading", { name: /^Olá/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Seu próximo horário" })).toHaveCount(0);
+
+    // Lista: em Anteriores, com "Encerrado", sem Cancelar e sem Avaliar.
+    await page.goto("/app/agendamentos");
+    await expect(page.getByText("Nenhum agendamento em aberto")).toBeVisible();
+    const anteriores = page.locator("section", {
+      has: page.getByRole("heading", { name: "Anteriores" }),
+    });
+    await expect(anteriores.getByText("Encerrado")).toBeVisible();
+    await expect(anteriores.getByRole("link", { name: "Agendar de novo" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Cancelar", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Avaliar" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Como chegar" })).toHaveCount(0);
+
+    // É só apresentação: no banco continua agendado...
+    const [ag] = sql<{ status: string }>(`select status from appointments where id = '${id}'`);
+    expect(ag?.status).toBe("scheduled");
+
+    // ...e o dono o vê nas pendências para lançar dinheiro ou falta.
+    await page.context().clearCookies();
+    await entrar(page, loja.dono.email, "barbearia");
+    await page.goto("/painel/pendencias");
+    await expect(page.getByText(cliente.nome)).toBeVisible();
+  });
+
+  test("horário que acabou há 30 minutos continua Em aberto", async ({ page }) => {
+    const loja = await criarBarbeariaPronta();
+    const cliente = await criarCliente();
+    atendimentoNaFicha(
+      loja,
+      fichaDoCliente(loja, cliente),
+      `now() - interval '60 minutes'`,
+      `now() - interval '30 minutes'`,
+    );
+
+    await entrar(page, cliente.email, "cliente");
+    await page.goto("/app/agendamentos");
+    const abertos = page.locator("section", {
+      has: page.getByRole("heading", { name: "Em aberto" }),
+    });
+    await expect(abertos.getByText(loja.nome)).toBeVisible();
+    await expect(page.getByText("Encerrado")).toHaveCount(0);
+  });
+
+  test("atendimento em andamento aparece no Início e em Em aberto", async ({ page }) => {
+    const loja = await criarBarbeariaPronta();
+    const cliente = await criarCliente();
+    atendimentoNaFicha(
+      loja,
+      fichaDoCliente(loja, cliente),
+      `now() - interval '10 minutes'`,
+      `now() + interval '20 minutes'`,
+    );
+
+    await entrar(page, cliente.email, "cliente");
+    await page.goto("/app");
+    const proximo = page.locator("section", {
+      has: page.getByRole("heading", { name: "Seu próximo horário" }),
+    });
+    await expect(proximo.getByText(loja.nome)).toBeVisible();
+
+    await page.goto("/app/agendamentos");
+    const abertos = page.locator("section", {
+      has: page.getByRole("heading", { name: "Em aberto" }),
+    });
+    await expect(abertos.getByText(loja.nome)).toBeVisible();
   });
 
   test("agenda SEM conta pelo link público e recebe o link de acompanhamento", async ({ page }) => {

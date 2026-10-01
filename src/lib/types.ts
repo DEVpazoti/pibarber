@@ -311,6 +311,16 @@ export type MeuAgendamento = {
   servicos: string[];
   /** Já avaliado? Alimenta o botão "Avaliar" do card. */
   avaliado: boolean;
+  /**
+   * Em aberto no banco, mas já passou para o cliente: o barbeiro não concluiu
+   * nem marcou falta, e o horário acabou há mais de 1 hora. Vem do campo
+   * calculado `encerrado` (34_encerrado_para_o_cliente.sql) — a regra e a
+   * janela moram lá, com o `now()` do banco. A tela só lê.
+   *
+   * Só vale no LADO CLIENTE. O status continua `scheduled` para o painel
+   * mostrar o atendimento em /painel/pendencias.
+   */
+  encerrado: boolean;
 };
 
 /**
@@ -382,6 +392,22 @@ export const STATUS_AGENDAMENTO: Record<
   cancelled: { rotulo: "Cancelado", tom: "neutro" },
   no_show: { rotulo: "Faltou", tom: "danger" },
 };
+
+/**
+ * O chip do atendimento que o cliente vê como passado sem que a barbearia o
+ * tenha resolvido (`MeuAgendamento.encerrado`). Neutro de propósito: não é
+ * "Concluído" (verde diria que foi pago) nem "Faltou" (vermelho acusaria o
+ * cliente) — a barbearia ainda vai dizer qual dos dois foi.
+ */
+export const STATUS_ENCERRADO = { rotulo: "Encerrado", tom: "neutro" } as const;
+
+/**
+ * Em aberto para o CLIENTE: em aberto no banco e ainda não encerrado
+ * (`MeuAgendamento.encerrado`). O painel continua usando `emAberto()`.
+ */
+export function emAbertoParaOCliente(a: Pick<MeuAgendamento, "status" | "encerrado">): boolean {
+  return emAberto(a.status) && !a.encerrado;
+}
 
 /**
  * O atendimento ainda vai acontecer? É o recorte que separa "em aberto" de

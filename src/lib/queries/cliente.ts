@@ -2,8 +2,9 @@ import "server-only";
 
 import { unstable_rethrow } from "next/navigation";
 
+import { traduzirErroBanco, traduzirErroDesconhecido } from "@/lib/erros";
 import { createClient } from "@/lib/supabase/server";
-import type { MeuAgendamento } from "@/lib/types";
+import { falha, sucesso, type ActionResult, type MeuAgendamento } from "@/lib/types";
 import { many, one } from "@/lib/utils";
 
 /**
@@ -17,7 +18,7 @@ import { many, one } from "@/lib/utils";
  */
 
 const SELECT_MEUS = `
-  id, starts_at, ends_at, status, total_price, discount,
+  id, starts_at, ends_at, status, total_price, discount, encerrado,
   barbearia:barbershops!appointments_barbershop_id_fkey(
     id, name, slug, logo_url, street, number, neighborhood, city, cancel_deadline_hours
   ),
@@ -33,6 +34,8 @@ type LinhaMeuAgendamento = {
   status: MeuAgendamento["status"];
   total_price: number | string;
   discount: number | string;
+  /** Campo calculado `encerrado(appointments)`, 34_encerrado_para_o_cliente.sql. */
+  encerrado: boolean | null;
   barbearia: unknown;
   profissional: unknown;
   itens: { service: { name: string } | { name: string }[] | null }[] | null;
@@ -55,6 +58,7 @@ function normalizar(linha: LinhaMeuAgendamento): MeuAgendamento {
       .map((i) => one(i.service)?.name)
       .filter((n): n is string => typeof n === "string"),
     avaliado: many(linha.avaliacao).length > 0,
+    encerrado: linha.encerrado === true,
   };
 }
 
@@ -63,13 +67,19 @@ function normalizar(linha: LinhaMeuAgendamento): MeuAgendamento {
  *
  * É a prova de que o PiBarber é um marketplace: a mesma lista mistura lojas
  * diferentes, e é por isso que a tela tem filtro por estabelecimento.
+ *
+ * Devolve `ActionResult`, e não a lista crua: uma consulta que FALHOU não pode
+ * virar lista vazia. "Você não tem agendamentos" para quem tem um horário
+ * amanhã é pior do que um aviso de erro — a pessoa acredita e não aparece.
+ * Foi o risco que a 34 deixou à vista: num banco sem o campo `encerrado`, o
+ * select falha inteiro.
  */
 export async function carregarMeusAgendamentos(opcoes?: {
   de?: string;
   ate?: string;
   termo?: string;
   limite?: number;
-}): Promise<MeuAgendamento[]> {
+}): Promise<ActionResult<MeuAgendamento[]>> {
   try {
     const supabase = await createClient();
 
@@ -80,10 +90,9 @@ export async function carregarMeusAgendamentos(opcoes?: {
     // sem o app precisar ler `customers` (que tem o `notes` do barbeiro).
     const { data: ids, error: erroIds } = await supabase.rpc("meus_agendamentos_ids");
     if (erroIds) {
-      console.error("[app] falha ao buscar os meus agendamentos:", erroIds);
-      return [];
+      return falha(traduzirErroBanco(erroIds, "[app] falha ao buscar os meus agendamentos"));
     }
-    if (!ids || ids.length === 0) return [];
+    if (!ids || ids.length === 0) return sucesso([]);
 
     let consulta = supabase
       .from("appointments")
@@ -98,8 +107,7 @@ export async function carregarMeusAgendamentos(opcoes?: {
     const { data, error } = await consulta;
 
     if (error) {
-      console.error("[app] falha ao listar os agendamentos:", error);
-      return [];
+      return falha(traduzirErroBanco(error, "[app] falha ao listar os agendamentos"));
     }
 
     const lista = (data as unknown as LinhaMeuAgendamento[] | null)?.map(normalizar) ?? [];
@@ -107,17 +115,18 @@ export async function carregarMeusAgendamentos(opcoes?: {
     // O filtro por texto é feito aqui, e não no PostgREST: o termo casa com o
     // nome da barbearia OU com o do serviço, que vêm de tabelas diferentes.
     const termo = opcoes?.termo?.trim().toLowerCase();
-    if (!termo) return lista;
+    if (!termo) return sucesso(lista);
 
-    return lista.filter(
-      (a) =>
-        a.barbearia?.name.toLowerCase().includes(termo) ||
-        a.servicos.some((s) => s.toLowerCase().includes(termo)) ||
-        (a.profissional?.name ?? "").toLowerCase().includes(termo),
+    return sucesso(
+      lista.filter(
+        (a) =>
+          a.barbearia?.name.toLowerCase().includes(termo) ||
+          a.servicos.some((s) => s.toLowerCase().includes(termo)) ||
+          (a.profissional?.name ?? "").toLowerCase().includes(termo),
+      ),
     );
   } catch (error) {
     unstable_rethrow(error);
-    console.error("[app] erro inesperado ao listar os agendamentos:", error);
-    return [];
+    return falha(traduzirErroDesconhecido(error, "[app] erro inesperado ao listar os agendamentos"));
   }
 }

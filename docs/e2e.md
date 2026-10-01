@@ -46,12 +46,12 @@ O que vem de fora é simulado:
 - **Localização do setup**: GPS simulado do navegador.
 - **WhatsApp e Google Maps**: desligados.
 
-## O que está coberto (fases 1 a 4 — 55 testes)
+## O que está coberto (fases 1 a 4 — 58 testes)
 
 | Arquivo | Fluxos |
 |---|---|
 | `login.spec.ts` | as duas portas; senha errada; painel sem login; "Esqueci minha senha" com o e-mail e o link reais |
-| `cliente.spec.ts` | busca; agendar logado (+ e-mails ao cliente e ao dono); cancelar (+ aviso ao dono); avaliar; agendar sem conta e o link `/a/<token>`; loja que exige conta. Roda também no **celular** (Pixel 7) |
+| `cliente.spec.ts` | busca; agendar logado (+ e-mails ao cliente e ao dono); cancelar (+ aviso ao dono); avaliar; horário passado sem conclusão vira "Encerrado" (e segue nas pendências do dono), o que acabou há 30 min segue em aberto, o em andamento aparece no Início (34); agendar sem conta e o link `/a/<token>`; loja que exige conta. Roda também no **celular** (Pixel 7) |
 | `setup.spec.ts` | cadastro do dono → 6 etapas → loja no ar; celular repetido recusado |
 | `assinatura.spec.ts` | teste vencido pausa painel e página pública; pagamento pelo webhook libera; aviso de teste acabando (uma vez só); webhook e cron sem segredo recusados |
 | `painel.spec.ts` (fase 2) | encaixe pelo balcão; concluir no Pix (caixa + comissão) e pagar a comissão; falta; cancelar pelo painel (+ e-mail ao cliente); fiado concluído e recebido; pendências concluídas em lote; limite do plano Solo na equipe; lista de espera (com nome e contato) |

@@ -7,7 +7,12 @@ import { useState, useTransition } from "react";
 
 import { avaliarAtendimento, cancelarMeuAgendamento } from "@/app/actions/booking";
 import { Avatar, Button, Chip, Modal, RatingInput, Textarea } from "@/components/ui";
-import { emAberto, STATUS_AGENDAMENTO, type MeuAgendamento } from "@/lib/types";
+import {
+  emAbertoParaOCliente,
+  STATUS_AGENDAMENTO,
+  STATUS_ENCERRADO,
+  type MeuAgendamento,
+} from "@/lib/types";
 import { dataBR, horaBR } from "@/lib/utils";
 
 /**
@@ -18,6 +23,9 @@ import { dataBR, horaBR } from "@/lib/utils";
  *   agendado → Cancelar · Como chegar
  *   concluído sem avaliação → Avaliar (chamada visível: alimenta a nota)
  *   concluído → Agendar de novo
+ *   encerrado → Agendar de novo (passou, e a barbearia não concluiu nem marcou
+ *               falta: nada de Cancelar, e nada de Avaliar um atendimento que
+ *               pode nem ter acontecido)
  */
 export function AppointmentCard({ agendamento }: { agendamento: MeuAgendamento }) {
   const router = useRouter();
@@ -26,9 +34,10 @@ export function AppointmentCard({ agendamento }: { agendamento: MeuAgendamento }
   const [avaliando, setAvaliando] = useState(false);
   const [ocupado, iniciar] = useTransition();
 
-  const status = STATUS_AGENDAMENTO[agendamento.status];
+  const encerrado = agendamento.encerrado;
+  const status = encerrado ? STATUS_ENCERRADO : STATUS_AGENDAMENTO[agendamento.status];
   const loja = agendamento.barbearia;
-  const aberto = emAberto(agendamento.status);
+  const aberto = emAbertoParaOCliente(agendamento);
   const concluido = agendamento.status === "completed";
 
   const endereco = [loja?.street, loja?.number, loja?.neighborhood, loja?.city]
@@ -140,7 +149,7 @@ export function AppointmentCard({ agendamento }: { agendamento: MeuAgendamento }
           </Button>
         ) : null}
 
-        {concluido && loja ? (
+        {(concluido || encerrado) && loja ? (
           <Link
             href={`/b/${loja.slug}/agendar`}
             className="inline-flex h-11 items-center gap-1.5 rounded-field bg-surface-2 px-4 text-sm font-medium text-ink transition-colors hover:bg-line"

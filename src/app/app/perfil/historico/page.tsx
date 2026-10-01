@@ -2,6 +2,7 @@ import { History, Search } from "lucide-react";
 import type { Metadata } from "next";
 
 import { AppointmentCard } from "@/components/client/AppointmentCard";
+import { ErroAoCarregar } from "@/components/client/ErroAoCarregar";
 import { Button, EmptyState, Input, PageHeader } from "@/components/ui";
 import { requireRole } from "@/lib/auth";
 import { carregarMeusAgendamentos } from "@/lib/queries/cliente";
@@ -24,11 +25,12 @@ export default async function HistoricoPage({
   await requireRole(["client", "owner", "assistant"]);
   const { q = "", de = "", ate = "" } = await searchParams;
 
-  const agendamentos = await carregarMeusAgendamentos({
+  const resultado = await carregarMeusAgendamentos({
     termo: q,
     de: de || undefined,
     ate: ate || undefined,
   });
+  const agendamentos = resultado.data ?? [];
 
   const filtrando = de !== "" || ate !== "";
 
@@ -71,7 +73,11 @@ export default async function HistoricoPage({
         </div>
       </form>
 
-      {agendamentos.length === 0 ? (
+      {/* Falha não é "nenhum agendamento no período": o filtro continua na URL
+          e o "Tentar de novo" refaz a mesma busca. */}
+      {!resultado.ok ? (
+        <ErroAoCarregar titulo="Não consegui carregar o histórico" mensagem={resultado.message} />
+      ) : agendamentos.length === 0 ? (
         <EmptyState
           icone={<History aria-hidden />}
           titulo={
