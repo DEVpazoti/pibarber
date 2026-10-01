@@ -46,7 +46,7 @@ O que vem de fora é simulado:
 - **Localização do setup**: GPS simulado do navegador.
 - **WhatsApp e Google Maps**: desligados.
 
-## O que está coberto (fases 1 a 4 — 52 testes)
+## O que está coberto (fases 1 a 4 — 55 testes)
 
 | Arquivo | Fluxos |
 |---|---|
@@ -66,6 +66,7 @@ consulta quebrada.
 
 | `admin.spec.ts` (fase 4) | visão geral aponta teste acabando; busca e ficha; nota interna; estender o teste (+ histórico); desativar/ativar a loja; relato do dono pelo painel resolvido no /admin |
 | `emails.spec.ts` (fase 4) | lembrete de voltar para quem sumiu; descadastro pela página e de um clique, e respeitado no ciclo seguinte; loja que desligou; quem já tem horário; o intervalo do /admin; lembrete da véspera sem duplicar |
+| `whatsapp.spec.ts` | quem recebe o lembrete: quem marca depois das 18h da véspera (33) e com antecedência; não recebe loja desligada, cancelado, avulso sem celular, já na fila, fora das 36h. Testa a função do banco (o envio à Meta fica desligado no teste) |
 
 Fora da bateria, de propósito: **estorno e cancelamento pelo /admin** e a
 **tela de assinar** — os três chamam a API do Asaas, que o ambiente de teste
