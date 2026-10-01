@@ -9,7 +9,7 @@ O que o PiBarber manda, e quando:
 | Mensagem | Quando sai | Template na Meta |
 |---|---|---|
 | Confirmação | Assim que o cliente agenda (app ou link público) | `pibarber_confirmacao_v1` |
-| Lembrete | Às 18h da véspera, só para quem agendou antes disso | `pibarber_lembrete_v2` |
+| Lembrete | Às 18h da véspera; quem agenda depois disso recebe logo em seguida (33_lembrete_de_quem_marca_tarde.sql — com a confirmação desligada, é o lembrete que confirma) | `pibarber_lembrete_v2` |
 | Cancelamento | Quando o horário é cancelado (painel, app ou link) | `pibarber_cancelamento_v1` |
 
 As três vão do **número da plataforma**, não da barbearia. Os textos estão em
