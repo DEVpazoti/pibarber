@@ -5,6 +5,7 @@ import { unstable_rethrow } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type {
   AgendamentoNaAgenda,
+  ClienteNoDetalhe,
   ComissaoDoDia,
   ProfissionalNaAgenda,
   ResumoDoPainel,
@@ -29,6 +30,7 @@ type LinhaAgendamento = {
   total_price: number;
   discount: number;
   notes: string | null;
+  source: AgendamentoNaAgenda["source"];
   cliente:
     | { id: string; full_name: string; phone: string | null }[]
     | { id: string; full_name: string; phone: string | null }
@@ -39,19 +41,29 @@ type LinhaAgendamento = {
     | null;
   dependente: { full_name: string }[] | { full_name: string } | null;
   itens:
-    | { service: { name: string }[] | { name: string } | null }[]
+    | {
+        price: number;
+        duration_minutes: number;
+        service: { name: string }[] | { name: string } | null;
+      }[]
     | null;
 };
 
 const SELECT_AGENDAMENTO = `
-  id, starts_at, ends_at, status, total_price, discount, notes,
+  id, starts_at, ends_at, status, total_price, discount, notes, source,
   cliente:customers!appointments_customer_id_fkey(id, full_name, phone),
   profissional:professionals!appointments_professional_id_fkey(id, name, nickname),
   dependente:dependents!appointments_dependent_id_fkey(full_name),
-  itens:appointment_services(service:services(name))
+  itens:appointment_services(price, duration_minutes, service:services(name))
 `;
 
 function normalizar(linha: LinhaAgendamento): AgendamentoNaAgenda {
+  const itens = many(linha.itens).map((item) => ({
+    nome: one(item.service)?.name ?? null,
+    preco: Number(item.price),
+    duracao: Number(item.duration_minutes),
+  }));
+
   return {
     id: linha.id,
     starts_at: linha.starts_at,
@@ -60,12 +72,12 @@ function normalizar(linha: LinhaAgendamento): AgendamentoNaAgenda {
     total_price: Number(linha.total_price),
     discount: Number(linha.discount),
     notes: linha.notes,
+    source: linha.source,
     cliente: one(linha.cliente),
     profissional: one(linha.profissional),
     dependente: one(linha.dependente),
-    servicos: many(linha.itens)
-      .map((item) => one(item.service)?.name)
-      .filter((nome): nome is string => typeof nome === "string"),
+    servicos: itens.map((i) => i.nome).filter((nome): nome is string => nome !== null),
+    itens: itens.filter((i): i is typeof i & { nome: string } => i.nome !== null),
   };
 }
 
@@ -136,6 +148,106 @@ export async function carregarAgendamento(
     unstable_rethrow(error);
     console.error("[agenda] erro inesperado ao carregar o agendamento:", error);
     return null;
+  }
+}
+
+/* ==========================================================================
+   A ficha de quem está na cadeira — para o detalhe do agendamento
+   ========================================================================== */
+
+/**
+ * Visitas, faltas, observações, fiado e foto das fichas dos agendamentos na
+ * tela, por id da ficha.
+ *
+ * Vem junto com a página, e não de uma action chamada ao abrir o detalhe: no
+ * "Ver como o dono" o painel é somente leitura e `requireShopContext()` recusa
+ * TODA server action, inclusive de leitura (src/lib/auth.ts). São três
+ * consultas para a tela inteira, não três por agendamento.
+ *
+ * `podeVerDinheiro` falso (assistente) tira `total_spent` do select: o dado não
+ * sai do banco por este caminho, em vez de sair e ser escondido na tela.
+ *
+ * Se algo falhar, o detalhe abre sem o bloco do cliente — a agenda não pode
+ * parar por causa dele.
+ */
+export async function carregarClientesDoDetalhe(
+  shopId: string,
+  agendamentos: AgendamentoNaAgenda[],
+  podeVerDinheiro: boolean,
+): Promise<Record<string, ClienteNoDetalhe>> {
+  const ids = [
+    ...new Set(
+      agendamentos.map((a) => a.cliente?.id).filter((id): id is string => typeof id === "string"),
+    ),
+  ];
+  if (ids.length === 0) return {};
+
+  try {
+    const supabase = await createClient();
+
+    const colunas = podeVerDinheiro
+      ? "id, total_visits, last_visit_at, no_show_count, notes, total_spent"
+      : "id, total_visits, last_visit_at, no_show_count, notes";
+
+    const [fichas, fiados, fotos] = await Promise.all([
+      supabase
+        .from("customers")
+        .select(colunas)
+        .eq("barbershop_id", shopId)
+        .in("id", ids)
+        .overrideTypes<
+          {
+            id: string;
+            total_visits: number;
+            last_visit_at: string | null;
+            no_show_count: number;
+            notes: string | null;
+            total_spent?: number;
+          }[],
+          { merge: false }
+        >(),
+      supabase
+        .from("debts")
+        .select("customer_id, original_amount, paid_amount")
+        .eq("barbershop_id", shopId)
+        .in("customer_id", ids)
+        .in("status", ["open", "partial"]),
+      supabase.rpc("fotos_dos_clientes", { p_shop: shopId, p_clientes: ids }),
+    ]);
+
+    if (fichas.error) {
+      console.error("[agenda] falha ao ler as fichas do detalhe:", fichas.error);
+      return {};
+    }
+    // Fiado e foto são acessórios: sem eles o bloco ainda abre, com o resto.
+    if (fiados.error) console.error("[agenda] falha ao somar o fiado do detalhe:", fiados.error);
+    if (fotos.error) console.error("[agenda] falha ao ler as fotos do detalhe:", fotos.error);
+
+    const fiadoPorFicha = new Map<string, number>();
+    for (const d of fiados.data ?? []) {
+      const resta = Number(d.original_amount) - Number(d.paid_amount);
+      fiadoPorFicha.set(d.customer_id, (fiadoPorFicha.get(d.customer_id) ?? 0) + resta);
+    }
+
+    const fotoPorFicha = new Map((fotos.data ?? []).map((f) => [f.customer_id, f.avatar_url]));
+
+    const resultado: Record<string, ClienteNoDetalhe> = {};
+    for (const f of fichas.data ?? []) {
+      resultado[f.id] = {
+        visitas: f.total_visits,
+        ultimaVisita: f.last_visit_at,
+        faltas: f.no_show_count,
+        observacoes: f.notes,
+        fotoUrl: fotoPorFicha.get(f.id) ?? null,
+        fiadoAberto: fiadoPorFicha.get(f.id) ?? 0,
+        totalGasto: podeVerDinheiro && f.total_spent != null ? Number(f.total_spent) : null,
+      };
+    }
+    return resultado;
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error("[agenda] erro inesperado ao ler as fichas do detalhe:", error);
+    return {};
   }
 }
 

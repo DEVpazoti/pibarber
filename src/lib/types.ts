@@ -151,6 +151,8 @@ export type AgendamentoNaAgenda = {
   total_price: number;
   discount: number;
   notes: string | null;
+  /** Online (o cliente marcou) ou manual (o balcão marcou). */
+  source: AppointmentSource;
   /** `phone` é nulo no cliente avulso — quem entrou pela porta e sentou. */
   cliente: { id: string; full_name: string; phone: string | null } | null;
   profissional: { id: string; name: string; nickname: string | null } | null;
@@ -158,6 +160,27 @@ export type AgendamentoNaAgenda = {
   dependente: { full_name: string } | null;
   /** Os nomes dos serviços, já congelados na marcação. */
   servicos: string[];
+  /** Os mesmos serviços com o preço e a duração congelados na marcação. */
+  itens: { nome: string; preco: number; duracao: number }[];
+};
+
+/**
+ * O que o detalhe do agendamento mostra sobre a PESSOA na cadeira — a ficha
+ * dela nesta loja, não o perfil global.
+ *
+ * `totalGasto` é nulo para o assistente: o dado nem é buscado
+ * (`carregarClientesDoDetalhe`), não só escondido na tela.
+ */
+export type ClienteNoDetalhe = {
+  visitas: number;
+  ultimaVisita: string | null;
+  faltas: number;
+  observacoes: string | null;
+  /** Só de quem tem conta e subiu foto (36_foto_do_cliente.sql). */
+  fotoUrl: string | null;
+  /** O que ainda deve em fiado nesta loja. */
+  fiadoAberto: number;
+  totalGasto: number | null;
 };
 
 /** O profissional como a agenda precisa dele: uma coluna da grade. */

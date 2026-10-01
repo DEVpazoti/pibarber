@@ -8,6 +8,7 @@ import { PageHeader, StatCard } from "@/components/ui";
 import { requireShopContext } from "@/lib/auth";
 import {
   carregarAgendamentos,
+  carregarClientesDoDetalhe,
   carregarComissoesDoDia,
   carregarProfissionais,
   carregarResumo,
@@ -45,6 +46,10 @@ export default async function PainelPage() {
       carregarComissoesDoDia(shopId, hoje),
       contarPendencias(shopId, hoje),
     ]);
+
+  // Depende da lista (os ids das fichas), por isso vem depois e não no
+  // Promise.all. O detalhe do agendamento abre com isto já na mão.
+  const clientes = await carregarClientesDoDetalhe(shopId, agendamentos, podeVerDinheiro);
 
   return (
     <>
@@ -95,6 +100,7 @@ export default async function PainelPage() {
         servicos={servicos}
         dia={hoje}
         podeVerDinheiro={podeVerDinheiro}
+        clientes={clientes}
       />
 
       {/* NO FIM da tela, de propósito: o barbeiro abre esta página para ver a
