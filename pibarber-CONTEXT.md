@@ -473,13 +473,14 @@ select e "Meus agendamentos" e o Histórico mostram "Não consegui carregar"
 (`ErroAoCarregar`) para TODO cliente. Desde a 34, essa consulta devolve
 `ActionResult` — erro nunca vira lista vazia.
 
-> ⚠️ **ESTADO DA 34 (branch `fix/encerrado-no-app`, 30/09/2026):**
-> - **Migração 34 NÃO aplicada em dev nem em produção. E2E NÃO rodou.** O SQL
->   foi validado só num Postgres em memória (PGlite) com stubs das tabelas;
->   typecheck e lint verdes.
-> - **Ordem obrigatória de deploy: aplicar a 34 em produção ANTES do merge.** A
->   34 é compatível com o código antigo; o código novo NÃO é compatível com
->   banco sem a 34.
+> ⚠️ **ESTADO DA 34 (atualizado em 01/10/2026):**
+> - **Aplicada em PRODUÇÃO em 01/10/2026**, antes do merge (portão passou; 90
+>   atendimentos `scheduled` antigos passaram a aparecer como "Encerrado" para o
+>   cliente, nenhum status mudou). **NÃO aplicada em dev. E2E NÃO rodou.** O SQL
+>   foi validado num Postgres em memória (PGlite) com stubs; typecheck e lint verdes.
+> - **Ordem obrigatória de deploy (vale para qualquer banco):** aplicar a 34 ANTES
+>   do código. A 34 é compatível com o código antigo; o código novo NÃO é
+>   compatível com banco sem a 34 — o dev precisa da 34 antes de rodar esta versão.
 > - `database.types.ts` teve a entrada `encerrado` acrescentada **à mão** (sem
 >   credencial de dev para regerar): conferir ao regerar.
 
