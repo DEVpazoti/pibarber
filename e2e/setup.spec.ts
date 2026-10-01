@@ -42,6 +42,19 @@ test("dono se cadastra, passa pelo setup e a barbearia vai ao ar", async ({ page
 
   // --- 1. Sua barbearia --------------------------------------------------------
   await expect(page.locator("#st-nome")).toHaveValue(nomeLoja);
+
+  // "Como conheceu" é obrigatório: sem resposta, não avança.
+  await page.getByRole("button", { name: "Continuar" }).click();
+  await expect(page.getByRole("alert")).toContainText("Escolha como você conheceu o PiBarber");
+  await expect(page.locator("#st-nome")).toBeVisible();
+
+  // "Outro" exige o "Qual?".
+  await page.locator("#st-como-conheceu").selectOption({ label: "Outro" });
+  await page.getByRole("button", { name: "Continuar" }).click();
+  await expect(page.getByRole("alert")).toContainText("Conte qual foi o canal");
+  await expect(page.locator("#st-nome")).toBeVisible();
+
+  await page.locator("#st-como-conheceu-detalhe").fill("  Feira de barbeiros  ");
   await page.getByRole("button", { name: "Continuar" }).click();
 
   // --- 2. Onde fica ------------------------------------------------------------
@@ -96,6 +109,14 @@ test("dono se cadastra, passa pelo setup e a barbearia vai ao ar", async ({ page
   expect(loja!.servicos).toBeGreaterThan(0);
   expect(loja!.profissionais).toBeGreaterThan(0);
   expect(loja!.dias_abertos).toBeGreaterThan(0);
+
+  // A resposta da etapa 1, aparada (35_como_conheceu.sql).
+  const [resposta] = sql<{ source: string; detail: string }>(`
+    select a.source, a.detail from barbershop_acquisition a
+      join barbershops b on b.id = a.barbershop_id
+      join profiles p on p.id = b.owner_id
+     where p.email = '${email}'`);
+  expect(resposta).toEqual({ source: "other", detail: "Feira de barbeiros" });
 
   // A página pública abre para quem não tem conta.
   await page.context().clearCookies();

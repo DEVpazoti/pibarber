@@ -8,8 +8,10 @@
 > Quem terminar um agente atualiza este arquivo ao final — é a regra que
 > mantém o próximo agente informado.
 
-**Atualizado por último:** 2026-09-24 — setup guiado, assinaturas (Asaas),
-super admin, relatos e as duas portas de login (agente 02).
+**Atualizado por último:** 2026-10-01 — "Como conheceu o PiBarber?" (branch
+`feat/como-conheceu`, migração 35 não aplicada). Antes: 2026-09-24 — setup
+guiado, assinaturas (Asaas), super admin, relatos e as duas portas de login
+(agente 02).
 **Commit de referência:** branch `feat/setup-barbearia`, commit "feat: duas portas
 de login" (sobre `a3174d3`).
 
@@ -222,13 +224,17 @@ isolada com o env de produção. **Produção só com autorização explícita.*
 32_lista_espera_contato  contatos_da_lista_de_espera(): nome e celular da fila para quem é da loja
 33_lembrete_de_quem_marca_tarde  quem marca depois das 18h da véspera volta a receber o lembrete do WhatsApp
 34_encerrado_para_o_cliente      encerrado(appointments): passou 1h do fim sem conclusão → "Encerrado" no app; client_home usa a regra
+35_como_conheceu                 barbershop_acquisition + salvar_como_conheceu(); admin_barbearias() ganha o canal (branch feat/como-conheceu)
 ```
 
 ⚠️ **Há duas migrações `25_`:** `25_lembrete_diz_o_dia.sql` (agente do WhatsApp,
 22/09) e `25_setup_barbearia.sql`. Rodam nessa ordem (alfabética) e não
 dependem uma da outra. A 33 desfaz uma regra da `25_lembrete_…` — ver lá.
 
-**A próxima migração é a `35_`.** Os modelos de e-mail do Supabase Auth ficam
+**A próxima migração livre é a `37_`.** A `36_` está reservada para
+`36_foto_do_cliente.sql` (branch `feat/detalhe-agendamento-pc`) e a `35_` é a de
+"como conheceu" (branch `feat/como-conheceu`) — as duas foram escritas na mesma
+sessão, em branches separadas, e podem entrar em qualquer ordem. Os modelos de e-mail do Supabase Auth ficam
 em `supabase/emails/*.html` (colados à mão no painel — `docs/emails.md`). Regras para escrever uma:
 
 - Idempotente de ponta a ponta. `create table if not exists`, `do $$ ... exception
@@ -282,6 +288,11 @@ em `supabase/emails/*.html` (colados à mão no painel — `docs/emails.md`). Re
   trigger), `subscription_payments` (espelho das faturas do Asaas),
   `subscription_events` (estorno, cancelamento, extensão de teste) — §13.
 - `feedbacks` — relatos enviados pelo painel (§14).
+- `barbershop_acquisition` — "Como você conheceu o PiBarber?" (35), uma linha
+  por loja. **Fora de `barbershops` de propósito:** o anon lê TODAS as colunas
+  de `barbershops` (grant de tabela do 03), e o detalhe é texto livre com nome
+  de gente. Escrita só por `salvar_como_conheceu()`, que exige dono e setup em
+  andamento; leitura do dono e do admin.
 - `admin_notes` (notas internas por loja) e `admin_audit` (quem visualizou o
   quê) — só admin da plataforma.
 
@@ -484,6 +495,26 @@ select e "Meus agendamentos" e o Histórico mostram "Não consegui carregar"
 > - `database.types.ts` teve a entrada `encerrado` acrescentada **à mão** (sem
 >   credencial de dev para regerar): conferir ao regerar.
 
+**Coluna nova em `barbershops` é PÚBLICA.** `grant select on barbershops to
+anon` (03) vale para a tabela inteira, e não dá para revogar uma coluna só de
+quem tem o grant da tabela. Dado interno da loja vai em tabela própria, como
+`barbershop_acquisition` (35).
+
+**Mudar o retorno de `admin_barbearias()` exige `drop` + `create`** (o tipo de
+`returns table` não muda com `create or replace`). Faça como a 35: a migração
+inteira em `begin/commit`, os grants recriados e um portão conferindo que só
+`authenticated` executa e que a checagem de `is_platform_admin()` continua lá.
+
+> ⚠️ **ESTADO DA 35 (01/10/2026):** **NÃO aplicada em produção NEM em dev.**
+> `database.types.ts` recebeu `barbershop_acquisition`, `salvar_como_conheceu` e
+> as duas colunas novas de `admin_barbearias` **à mão** (sem credencial de dev):
+> conferir ao regerar. O SQL foi validado num Postgres em memória (PGlite) com
+> stubs — 33 checagens, incluindo rodar duas vezes. E2E escrito e **não rodado**
+> (máquina sem Docker). **Ordem de deploy: aplicar a 35 ANTES do merge** — sem
+> ela a etapa 1 do setup NÃO AVANÇA (o RPC não existe) — nenhuma loja nova
+> consegue terminar o cadastro. O /admin não quebra: mostra "Não informado"
+> para todas.
+
 **Pix em assinatura do Asaas vira boleto híbrido** (boleto com QR Pix). Pix
 compensa na hora; o boleto leva até 3 dias úteis. Decisão: aceitar e avisar
 na tela.
@@ -685,6 +716,11 @@ Criadas pelo agente 02:
   estado do cliente não funciona: o revalidate da action re-renderiza
   `/configurar`, que manda para `/painel` — a tela nunca aparecia (achado pelo
   E2E em 2026-09-30).
+- A etapa 1 pergunta **"Como você conheceu o PiBarber?"** (obrigatória na
+  tela; `salvarSetupBarbearia` chama `salvar_como_conheceu()` antes do update).
+  NÃO é requisito de `concluir_setup_barbearia` — loja no meio do setup não
+  trava. Rótulos e espelho da regra em `src/lib/como-conheceu.ts`. No /admin:
+  ficha, filtro e coluna do CSV, e o bloco "Como conheceram" na visão geral.
 - **Só `concluir_setup_barbearia(shop)` publica a loja:** confere dono, mapa,
   um dia aberto, um serviço e um profissional ativos. Loja com `blocked_at`
   termina o setup mas continua escondida.

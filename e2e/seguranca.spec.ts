@@ -11,6 +11,7 @@ import {
   criarCliente,
   diaSP,
   entrar,
+  executar,
   sql,
 } from "./apoio";
 
@@ -206,5 +207,58 @@ test.describe("Isolamento entre contas", () => {
       await page.goto(rota);
       await expect(page, rota).toHaveURL(/\/app/);
     }
+  });
+});
+
+test.describe("Como conheceu o PiBarber", () => {
+  test("depois do setup, o dono não altera a resposta nem pela API", async () => {
+    const loja = await criarBarbeariaPronta(); // setup já concluído
+    executar(`insert into barbershop_acquisition (barbershop_id, source)
+              values ('${loja.id}', 'instagram')`);
+    const dono = await apiComo(loja.dono.email);
+
+    // Pela função: recusada, setup concluído.
+    const rpc = await dono.rpc("salvar_como_conheceu", {
+      p_shop: loja.id,
+      p_source: "google",
+      p_detail: "",
+    });
+    expect(rpc.error).not.toBeNull();
+
+    // Direto na tabela: sem grant de escrita.
+    const update = await dono
+      .from("barbershop_acquisition")
+      .update({ source: "google" })
+      .eq("barbershop_id", loja.id);
+    expect(update.error).not.toBeNull();
+    const insert = await dono
+      .from("barbershop_acquisition")
+      .insert({ barbershop_id: loja.id, source: "google" });
+    expect(insert.error).not.toBeNull();
+
+    // O dono LÊ a própria resposta (controle: a leitura funciona)…
+    const lida = await dono
+      .from("barbershop_acquisition")
+      .select("source")
+      .eq("barbershop_id", loja.id);
+    expect(lida.data).toEqual([{ source: "instagram" }]);
+
+    // …e nada mudou no banco.
+    expect(
+      sql<{ source: string }>(
+        `select source from barbershop_acquisition where barbershop_id = '${loja.id}'`,
+      ),
+    ).toEqual([{ source: "instagram" }]);
+  });
+
+  test("quem não tem conta não lê a resposta", async () => {
+    const loja = await criarBarbeariaPronta();
+    executar(`insert into barbershop_acquisition (barbershop_id, source, detail)
+              values ('${loja.id}', 'friend_referral', 'Nome de alguém')`);
+    const r = await apiAnonima()
+      .from("barbershop_acquisition")
+      .select("detail")
+      .eq("barbershop_id", loja.id);
+    expect(r.data ?? []).toHaveLength(0);
   });
 });

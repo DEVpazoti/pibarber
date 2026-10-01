@@ -33,6 +33,15 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button, CampoImagem, Field, Input, Select, Textarea } from "@/components/ui";
 import type { ActionResult, Barbershop, BusinessHour, Professional, Service } from "@/lib/types";
 import { buscarCEP, ESTADOS } from "@/lib/viacep";
+import {
+  CANAIS,
+  campoDeDetalhe,
+  DETALHE_MAXIMO,
+  ehCanal,
+  erroComoConheceu,
+  ROTULO_CANAL,
+  type CanalDeAquisicao,
+} from "@/lib/como-conheceu";
 import { WHATSAPP_COMERCIAL } from "@/lib/config";
 import {
   cn,
@@ -110,8 +119,12 @@ type PropsEtapa = {
   aoVoltar?: () => void;
 };
 
+/** A resposta de "Como você conheceu o PiBarber?", se já foi dada. */
+export type RespostaComoConheceu = { source: string; detail: string | null } | null;
+
 export function SetupGuiado({
   loja,
+  comoConheceu,
   horarios,
   servicos,
   profissionais,
@@ -120,6 +133,7 @@ export function SetupGuiado({
   passoInicial,
 }: {
   loja: Barbershop;
+  comoConheceu: RespostaComoConheceu;
   horarios: BusinessHour[];
   servicos: ServicoSalvo[];
   profissionais: ProfissionalSalvo[];
@@ -198,7 +212,12 @@ export function SetupGuiado({
 
             <div className="mt-6">
               {passo.id === "barbearia" ? (
-                <EtapaBarbearia loja={loja} urlPublica={urlPublica} aoAvancar={avancar} />
+                <EtapaBarbearia
+                  loja={loja}
+                  comoConheceu={comoConheceu}
+                  urlPublica={urlPublica}
+                  aoAvancar={avancar}
+                />
               ) : passo.id === "endereco" ? (
                 <EtapaEndereco loja={loja} aoAvancar={avancar} aoVoltar={aoVoltar} />
               ) : passo.id === "horario" ? (
@@ -329,17 +348,47 @@ function Rodape({
 
 function EtapaBarbearia({
   loja,
+  comoConheceu,
   urlPublica,
   aoAvancar,
-}: { loja: Barbershop; urlPublica: string } & PropsEtapa) {
+}: { loja: Barbershop; comoConheceu: RespostaComoConheceu; urlPublica: string } & PropsEtapa) {
   const [nome, setNome] = useState(loja.name);
   const [slug, setSlug] = useState(loja.slug);
   const [whatsapp, setWhatsapp] = useState(mascaraTelefone(loja.whatsapp ?? ""));
   const [telefone, setTelefone] = useState(mascaraTelefone(loja.phone ?? ""));
   const [descricao, setDescricao] = useState(loja.description ?? "");
   const [logoUrl, setLogoUrl] = useState(loja.logo_url ?? "");
+  // Volta preenchida se o dono já respondeu e voltou à etapa 1 no setup.
+  const [canal, setCanal] = useState<CanalDeAquisicao | "">(
+    ehCanal(comoConheceu?.source) ? comoConheceu.source : "",
+  );
+  const [detalhe, setDetalhe] = useState(comoConheceu?.detail ?? "");
+  const [erroCanal, setErroCanal] = useState(false);
 
-  const { erro, salvando, enviar } = useEnvioDaEtapa(aoAvancar);
+  const { erro, setErro, salvando, enviar } = useEnvioDaEtapa(aoAvancar);
+  const campoDetalhe = campoDeDetalhe(canal);
+
+  function continuar() {
+    // Espelho da regra do banco: o erro aparece sem ida ao servidor.
+    const problema = erroComoConheceu(canal, campoDetalhe ? detalhe : "");
+    setErroCanal(problema !== null);
+    if (problema) {
+      setErro(problema);
+      return;
+    }
+    enviar(() =>
+      salvarSetupBarbearia({
+        nome,
+        slug,
+        descricao,
+        telefone,
+        whatsapp,
+        logoUrl,
+        comoConheceu: canal,
+        comoConheceuDetalhe: campoDetalhe ? detalhe : "",
+      }),
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -410,22 +459,48 @@ function EtapaBarbearia({
         dica="Opcional. Quadrada fica melhor. JPG, PNG ou WebP, até 5 MB."
       />
 
-      <Rodape
-        erro={erro}
-        salvando={salvando}
-        aoContinuar={() =>
-          enviar(() =>
-            salvarSetupBarbearia({
-              nome,
-              slug,
-              descricao,
-              telefone,
-              whatsapp,
-              logoUrl,
-            }),
-          )
-        }
-      />
+      {/* Só para a plataforma saber de onde vêm as barbearias: não aparece
+          para o cliente nem nas configurações (35_como_conheceu.sql). */}
+      <Field label="Como você conheceu o PiBarber?" htmlFor="st-como-conheceu" obrigatorio>
+        <Select
+          id="st-como-conheceu"
+          placeholder="Escolha uma opção"
+          erro={erroCanal && !canal}
+          value={canal}
+          onChange={(e) => {
+            setCanal(ehCanal(e.target.value) ? e.target.value : "");
+            setErroCanal(false);
+          }}
+        >
+          {CANAIS.map((c) => (
+            <option key={c} value={c}>
+              {ROTULO_CANAL[c]}
+            </option>
+          ))}
+        </Select>
+      </Field>
+
+      {campoDetalhe ? (
+        <Field
+          label={campoDetalhe.rotulo}
+          htmlFor="st-como-conheceu-detalhe"
+          obrigatorio={campoDetalhe.obrigatorio}
+          dica={campoDetalhe.obrigatorio ? undefined : "Opcional."}
+        >
+          <Input
+            id="st-como-conheceu-detalhe"
+            maxLength={DETALHE_MAXIMO}
+            erro={erroCanal && campoDetalhe.obrigatorio && !detalhe.trim()}
+            value={detalhe}
+            onChange={(e) => {
+              setDetalhe(e.target.value);
+              setErroCanal(false);
+            }}
+          />
+        </Field>
+      ) : null}
+
+      <Rodape erro={erro} salvando={salvando} aoContinuar={continuar} />
     </div>
   );
 }

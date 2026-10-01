@@ -30,8 +30,14 @@ export default async function ConfigurarPage() {
 
   const supabase = await createClient();
 
-  const [loja, horarios, servicos, profissionais] = await Promise.all([
+  const [loja, comoConheceu, horarios, servicos, profissionais] = await Promise.all([
     supabase.from("barbershops").select("*").eq("id", shopId).maybeSingle(),
+    // A resposta da etapa 1, para ela voltar preenchida (35_como_conheceu.sql).
+    supabase
+      .from("barbershop_acquisition")
+      .select("source, detail")
+      .eq("barbershop_id", shopId)
+      .maybeSingle(),
     supabase
       .from("business_hours")
       .select("*")
@@ -49,7 +55,7 @@ export default async function ConfigurarPage() {
       .order("sort_order", { ascending: true }),
   ]);
 
-  for (const r of [loja, horarios, servicos, profissionais]) {
+  for (const r of [loja, comoConheceu, horarios, servicos, profissionais]) {
     if (r.error) console.error("[configurar] falha ao carregar o setup:", r.error);
   }
   if (!loja.data) redirect("/sem-barbearia");
@@ -77,6 +83,7 @@ export default async function ConfigurarPage() {
   return (
     <SetupGuiado
       loja={loja.data}
+      comoConheceu={comoConheceu.data ?? null}
       horarios={horarios.data ?? []}
       servicos={servicos.data ?? []}
       profissionais={profissionais.data ?? []}

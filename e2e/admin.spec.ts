@@ -157,3 +157,34 @@ test.describe("Admin", () => {
       .toMatch(/resol/);
   });
 });
+
+test.describe("Como conheceram o PiBarber", () => {
+  test("a resposta do setup aparece na ficha; loja antiga fica 'Não informado'", async ({
+    page,
+  }) => {
+    const respondeu = await criarBarbeariaPronta("Veio Indicada");
+    executar(`insert into barbershop_acquisition (barbershop_id, source, detail)
+              values ('${respondeu.id}', 'barber_referral', 'João da Navalha')`);
+    const antiga = await criarBarbeariaPronta("Loja Antiga");
+    const admin = await criarAdmin();
+    await entrar(page, admin.email, "barbearia");
+
+    await expect(page.getByRole("heading", { name: "Como conheceram o PiBarber" })).toBeVisible();
+
+    await page.goto(`/admin/barbearias/${respondeu.id}`);
+    await expect(
+      page.getByText("Indicação de outro barbeiro — João da Navalha"),
+    ).toBeVisible();
+
+    await page.goto(`/admin/barbearias/${antiga.id}`);
+    await expect(page.getByText("Não informado")).toBeVisible();
+
+    // O filtro da lista.
+    await page.goto("/admin/barbearias");
+    await page
+      .getByRole("combobox", { name: "Filtrar por como conheceu" })
+      .selectOption({ label: "Indicação de outro barbeiro" });
+    await expect(page.getByRole("link", { name: respondeu.nome }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: antiga.nome })).toHaveCount(0);
+  });
+});

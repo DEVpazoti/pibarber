@@ -4,6 +4,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect, unstable_rethrow } from "next/navigation";
 
 import { requireOwnerContext } from "@/lib/auth";
+import { erroComoConheceu } from "@/lib/como-conheceu";
 import { traduzirErroBanco, traduzirErroDesconhecido } from "@/lib/erros";
 import { erroDeCoordenada } from "@/lib/geocoding";
 import { TAG_SLUGS, tagBarbearia } from "@/lib/queries/barbearia";
@@ -34,6 +35,10 @@ export type DadosSetupBarbearia = {
   telefone?: string;
   whatsapp?: string;
   logoUrl?: string;
+  /** "Como você conheceu o PiBarber?" — valor de src/lib/como-conheceu.ts. */
+  comoConheceu: string;
+  /** "Quem indicou?" ou "Qual?", conforme o canal. */
+  comoConheceuDetalhe?: string;
 };
 
 export async function salvarSetupBarbearia(dados: DadosSetupBarbearia): Promise<ActionResult> {
@@ -48,7 +53,22 @@ export async function salvarSetupBarbearia(dados: DadosSetupBarbearia): Promise<
       return falha("O link só aceita letras minúsculas, números e hífen — de 3 a 60.", "slug");
     }
 
+    const erroCanal = erroComoConheceu(dados.comoConheceu, dados.comoConheceuDetalhe ?? "");
+    if (erroCanal) return falha(erroCanal, "comoConheceu");
+
     const supabase = await createClient();
+
+    // Primeiro a pergunta: é a função que vale (35_como_conheceu.sql) — ela
+    // confere dono e setup em andamento, e recusa depois do setup concluído.
+    // Fica numa tabela à parte de `barbershops`, que o anon lê inteira.
+    const { error: erroResposta } = await supabase.rpc("salvar_como_conheceu", {
+      p_shop: shopId,
+      p_source: dados.comoConheceu,
+      p_detail: dados.comoConheceuDetalhe?.trim() ?? "",
+    });
+    if (erroResposta) {
+      return falha(traduzirErroBanco(erroResposta, "[setup] salvar_como_conheceu"), "comoConheceu");
+    }
 
     const { error } = await supabase
       .from("barbershops")
