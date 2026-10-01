@@ -211,9 +211,14 @@ isolada com o env de produção. **Produção só com autorização explícita.*
 30_lado_cliente          meus_agendamentos_ids() e client_home com a regra do lado cliente
 31_emails                email_messages, email_opt_outs, platform_settings, interruptores de e-mail
 32_lista_espera_contato  contatos_da_lista_de_espera(): nome e celular da fila para quem é da loja
+33_lembrete_de_quem_marca_tarde  quem marca depois das 18h da véspera volta a receber o lembrete do WhatsApp
 ```
 
-**A próxima migração é a `33_`.** Os modelos de e-mail do Supabase Auth ficam
+⚠️ **Há duas migrações `25_`:** `25_lembrete_diz_o_dia.sql` (agente do WhatsApp,
+22/09) e `25_setup_barbearia.sql`. Rodam nessa ordem (alfabética) e não
+dependem uma da outra. A 33 desfaz uma regra da `25_lembrete_…` — ver lá.
+
+**A próxima migração é a `34_`.** Os modelos de e-mail do Supabase Auth ficam
 em `supabase/emails/*.html` (colados à mão no painel — `docs/emails.md`). Regras para escrever uma:
 
 - Idempotente de ponta a ponta. `create table if not exists`, `do $$ ... exception
@@ -479,7 +484,7 @@ Não confundir com `barbershops.whatsapp` (contato da loja, só link `wa.me` —
 | Evento | Quando | Onde nasce | Template |
 |---|---|---|---|
 | ~~`confirmation`~~ | **Desligada em 2026-09-30** (decisão do negócio): a confirmação vai por e-mail; o template continua no catálogo, fora de `EVENTOS` | — | `pibarber_confirmacao_v1` |
-| `reminder` | 18h da véspera (ou já, se esse instante passou) | Cron → `varrerLembretes` | `pibarber_lembrete_v1` |
+| `reminder` | 18h da véspera; quem marca depois disso recebe na próxima rodada (33) | Cron → `varrerLembretes` | `pibarber_lembrete_v2` (o dia é parâmetro: "hoje"/"amanhã"/data) |
 | `cancellation` | Cancelou pelo painel (`cancelarAgendamento`), pelo app (`cancelarMeuAgendamento`) ou pelo link (`cancelarPorToken`) | Server Action → `avisarPorWhatsapp` | `pibarber_cancelamento_v1` |
 
 Agendamento criado **pelo balcão** (`criarAgendamento`) não gera confirmação,
