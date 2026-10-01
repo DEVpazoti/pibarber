@@ -8,8 +8,10 @@
 > Quem terminar um agente atualiza este arquivo ao final — é a regra que
 > mantém o próximo agente informado.
 
-**Atualizado por último:** 2026-09-24 — setup guiado, assinaturas (Asaas),
-super admin, relatos e as duas portas de login (agente 02).
+**Atualizado por último:** 2026-10-01 — detalhe do agendamento no PC (branch
+`feat/detalhe-agendamento-pc`, migração 36 não aplicada). Antes: 2026-09-24 —
+setup guiado, assinaturas (Asaas), super admin, relatos e as duas portas de
+login (agente 02).
 **Commit de referência:** branch `feat/setup-barbearia`, commit "feat: duas portas
 de login" (sobre `a3174d3`).
 
@@ -222,13 +224,17 @@ isolada com o env de produção. **Produção só com autorização explícita.*
 32_lista_espera_contato  contatos_da_lista_de_espera(): nome e celular da fila para quem é da loja
 33_lembrete_de_quem_marca_tarde  quem marca depois das 18h da véspera volta a receber o lembrete do WhatsApp
 34_encerrado_para_o_cliente      encerrado(appointments): passou 1h do fim sem conclusão → "Encerrado" no app; client_home usa a regra
+36_foto_do_cliente               fotos_dos_clientes(shop, ids[]): foto do perfil das fichas da loja, para o detalhe do agendamento (branch feat/detalhe-agendamento-pc)
 ```
 
 ⚠️ **Há duas migrações `25_`:** `25_lembrete_diz_o_dia.sql` (agente do WhatsApp,
 22/09) e `25_setup_barbearia.sql`. Rodam nessa ordem (alfabética) e não
 dependem uma da outra. A 33 desfaz uma regra da `25_lembrete_…` — ver lá.
 
-**A próxima migração é a `35_`.** Os modelos de e-mail do Supabase Auth ficam
+**A próxima migração livre é a `37_`.** A `35_` está reservada para
+`35_como_conheceu.sql` (branch `feat/como-conheceu`) e a `36_` é a da foto do
+cliente (branch `feat/detalhe-agendamento-pc`) — as duas foram escritas na
+mesma sessão, em branches separadas, e podem entrar em qualquer ordem. Os modelos de e-mail do Supabase Auth ficam
 em `supabase/emails/*.html` (colados à mão no painel — `docs/emails.md`). Regras para escrever uma:
 
 - Idempotente de ponta a ponta. `create table if not exists`, `do $$ ... exception
@@ -483,6 +489,21 @@ select e "Meus agendamentos" e o Histórico mostram "Não consegui carregar"
 >   compatível com banco sem a 34 — o dev precisa da 34 antes de rodar esta versão.
 > - `database.types.ts` teve a entrada `encerrado` acrescentada **à mão** (sem
 >   credencial de dev para regerar): conferir ao regerar.
+
+**Detalhe do agendamento: os dados vêm com a PÁGINA, não de uma action.** O
+painel lateral de `/painel` e `/painel/agenda` (`AppointmentSheet`) mostra a
+ficha do cliente (visitas, faltas, observações, fiado, foto). Isso é carregado
+por `carregarClientesDoDetalhe()` junto com a agenda — e não por uma server
+action ao abrir o detalhe — porque no "Ver como o dono" `requireShopContext()`
+recusa TODA action, inclusive de leitura. Para o assistente, `total_spent` sai
+do select (não é só escondido). A foto de OUTRA pessoa vem de
+`fotos_dos_clientes()` (36), não de embed em `profiles` (que volta nulo).
+
+> ⚠️ **ESTADO DA 36 (01/10/2026):** **NÃO aplicada em produção NEM em dev.**
+> `database.types.ts` recebeu `fotos_dos_clientes` **à mão** (sem credencial de
+> dev): conferir ao regerar. E2E escrito e **não rodado** (máquina sem Docker).
+> **Ordem de deploy:** aplicar a 36 ANTES do merge — sem ela o RPC falha, o
+> detalhe abre sem foto (só iniciais) e o log acusa o erro; nada mais quebra.
 
 **Pix em assinatura do Asaas vira boleto híbrido** (boleto com QR Pix). Pix
 compensa na hora; o boleto leva até 3 dias úteis. Decisão: aceitar e avisar

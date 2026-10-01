@@ -12,6 +12,7 @@ import {
   emAberto,
   STATUS_AGENDAMENTO,
   type AgendamentoNaAgenda,
+  type ClienteNoDetalhe,
   type ProfissionalNaAgenda,
   type ServicoNaAgenda,
 } from "@/lib/types";
@@ -31,6 +32,7 @@ export function HojeLista({
   servicos,
   dia,
   podeVerDinheiro,
+  clientes,
 }: {
   agendamentos: AgendamentoNaAgenda[];
   profissionais: ProfissionalNaAgenda[];
@@ -38,6 +40,8 @@ export function HojeLista({
   /** Hoje, calculado no servidor. */
   dia: string;
   podeVerDinheiro: boolean;
+  /** A ficha de cada cliente na tela, para o detalhe (por id da ficha). */
+  clientes: Record<string, ClienteNoDetalhe>;
 }) {
   const router = useRouter();
   const [detalhe, setDetalhe] = useState<AgendamentoNaAgenda | null>(null);
@@ -127,6 +131,7 @@ export function HojeLista({
 
       <AppointmentSheet
         agendamento={detalhe}
+        cliente={detalhe?.cliente ? (clientes[detalhe.cliente.id] ?? null) : null}
         aoFechar={() => setDetalhe(null)}
         aoConcluirPedido={(a) => {
           setDetalhe(null);

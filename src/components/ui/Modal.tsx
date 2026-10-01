@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 
 import { cn } from "@/lib/utils";
@@ -28,6 +28,54 @@ export function useFecharNoEsc(ativo: boolean, aoFechar: () => void) {
     document.addEventListener("keydown", aoTeclar);
     return () => document.removeEventListener("keydown", aoTeclar);
   }, [ativo, aoFechar]);
+}
+
+const FOCAVEIS =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/**
+ * Prende o foco do teclado dentro da janela enquanto ela está aberta.
+ *
+ * Sem isso, o Tab sai da gaveta e passeia pela agenda escurecida atrás —
+ * quem navega por teclado perde onde está. Ao abrir, o foco vai para o
+ * primeiro controle da janela; ao fechar, volta para o que estava focado
+ * antes (o atendimento que foi clicado).
+ */
+export function usePrenderFoco(ativo: boolean, janela: RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    if (!ativo) return;
+    const antes = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+    // O portal monta no mesmo ciclo; o elemento já existe quando o efeito roda.
+    const raiz = janela.current;
+    const focaveis = () => (raiz ? [...raiz.querySelectorAll<HTMLElement>(FOCAVEIS)] : []);
+    (focaveis()[0] ?? raiz)?.focus();
+
+    function aoTeclar(evento: KeyboardEvent) {
+      if (evento.key !== "Tab" || !raiz) return;
+      const lista = focaveis();
+      const primeiro = lista[0];
+      const ultimo = lista[lista.length - 1];
+      if (!primeiro || !ultimo) {
+        evento.preventDefault();
+        return;
+      }
+      const atual = document.activeElement;
+      if (evento.shiftKey && (atual === primeiro || !raiz.contains(atual))) {
+        evento.preventDefault();
+        ultimo.focus();
+      } else if (!evento.shiftKey && (atual === ultimo || !raiz.contains(atual))) {
+        evento.preventDefault();
+        primeiro.focus();
+      }
+    }
+
+    document.addEventListener("keydown", aoTeclar);
+    return () => {
+      document.removeEventListener("keydown", aoTeclar);
+      antes?.focus();
+    };
+  }, [ativo, janela]);
 }
 
 /**

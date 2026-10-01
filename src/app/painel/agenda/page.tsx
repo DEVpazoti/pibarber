@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui";
 import { requireShopContext } from "@/lib/auth";
 import {
   carregarAgendamentos,
+  carregarClientesDoDetalhe,
   carregarProfissionais,
   carregarServicos,
   contarPendencias,
@@ -76,7 +77,7 @@ export default async function AgendaPage({
 }: {
   searchParams: Promise<{ dia?: string; modo?: string }>;
 }) {
-  const { shopId } = await requireShopContext();
+  const { shopId, podeVerDinheiro } = await requireShopContext();
   const params = await searchParams;
 
   const hoje = hojeISO();
@@ -94,6 +95,10 @@ export default async function AgendaPage({
     faixaDaGrade(shopId),
     contarPendencias(shopId, hoje),
   ]);
+
+  // Depende da lista (os ids das fichas): o detalhe do agendamento abre com
+  // isto já na mão, sem action — ver carregarClientesDoDetalhe.
+  const clientes = await carregarClientesDoDetalhe(shopId, agendamentos, podeVerDinheiro);
 
   return (
     <>
@@ -116,6 +121,7 @@ export default async function AgendaPage({
         abreEm={faixa.abre}
         fechaEm={faixa.fecha}
         hoje={hoje}
+        clientes={clientes}
       />
     </>
   );

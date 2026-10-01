@@ -13,6 +13,7 @@ import { Button, EmptyState } from "@/components/ui";
 import type {
   AgendamentoNaAgenda,
   AppointmentStatus,
+  ClienteNoDetalhe,
   ProfissionalNaAgenda,
   ServicoNaAgenda,
 } from "@/lib/types";
@@ -65,6 +66,7 @@ export function AgendaGrid({
   abreEm,
   fechaEm,
   hoje,
+  clientes,
 }: {
   dia: string;
   modo: "dia" | "semana";
@@ -77,6 +79,8 @@ export function AgendaGrid({
   fechaEm: number;
   /** Hoje calculado no SERVIDOR, no fuso de São Paulo. */
   hoje: string;
+  /** A ficha de cada cliente na tela, para o detalhe (por id da ficha). */
+  clientes: Record<string, ClienteNoDetalhe>;
 }) {
   const router = useRouter();
 
@@ -336,6 +340,7 @@ export function AgendaGrid({
           ================================================================== */}
       <AppointmentSheet
         agendamento={detalhe}
+        cliente={detalhe?.cliente ? (clientes[detalhe.cliente.id] ?? null) : null}
         aoFechar={() => setDetalhe(null)}
         aoConcluirPedido={(a) => {
           setDetalhe(null);

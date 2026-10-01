@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import {
   criarAgendamento,
+  criarAssistente,
   criarBarbeariaPronta,
   criarCliente,
   diaSP,
@@ -232,5 +233,99 @@ test.describe("Equipe e lista de espera", () => {
     await page.getByRole("button", { name: "Tirar da fila" }).click();
     await page.getByRole("button", { name: "Tirar", exact: true }).click();
     await expect(page.getByText("Ninguém na lista de espera")).toBeVisible();
+  });
+});
+
+test.describe("Detalhe do agendamento", () => {
+  /**
+   * Uma ficha com histórico: visitas, uma falta, observação, fiado em aberto e
+   * e-mail (que NÃO pode aparecer no detalhe — a conta é da plataforma).
+   */
+  function fichaComHistorico(loja: Loja, cliente: string) {
+    const ag = criarAgendamento(loja, {
+      cliente,
+      dia: 1,
+      hora: "10:00",
+      email: `${cliente.toLowerCase().replace(/ /g, ".")}@e2e.dev`,
+    });
+    executar(`
+      update customers
+         set total_visits = 3, total_spent = 120, no_show_count = 1,
+             last_visit_at = now() - interval '10 days',
+             notes = 'Máquina 2 nas laterais'
+       where id = '${ag.customerId}';
+      insert into debts (barbershop_id, customer_id, original_amount)
+      values ('${loja.id}', '${ag.customerId}', 25);`);
+    return ag;
+  }
+
+  async function abrirDetalhe(page: Page, cliente: string) {
+    await page
+      .getByRole("button", { name: new RegExp(cliente) })
+      .first()
+      .click();
+    const painel = page.getByRole("dialog", { name: cliente });
+    await expect(painel).toBeVisible();
+    return painel;
+  }
+
+  test("no computador abre como painel lateral, com a ficha do cliente", async ({ page }) => {
+    const loja = await criarBarbeariaPronta();
+    fichaComHistorico(loja, "Diego Detalhe");
+    await abrirAgenda(page, loja, 1);
+
+    const painel = await abrirDetalhe(page, "Diego Detalhe");
+
+    // Painel à direita, de ~440px e da altura da tela — não a gaveta de baixo.
+    const caixa = await painel.boundingBox();
+    const tela = page.viewportSize();
+    expect(caixa && tela).toBeTruthy();
+    expect(Math.round(caixa!.width)).toBe(440);
+    expect(Math.round(caixa!.x + caixa!.width)).toBe(tela!.width);
+    expect(Math.round(caixa!.height)).toBe(tela!.height);
+
+    await expect(painel.getByText("Visitas")).toBeVisible();
+    await expect(painel.getByText("Máquina 2 nas laterais")).toBeVisible();
+    await expect(painel.getByRole("link", { name: /Fiado em aberto/ })).toHaveAttribute(
+      "href",
+      "/painel/fiado",
+    );
+    await expect(painel.getByText("Total gasto")).toBeVisible();
+    await expect(painel.getByRole("link", { name: "Ver ficha completa" })).toBeVisible();
+    await expect(painel.getByRole("button", { name: "Copiar telefone" })).toBeVisible();
+    await expect(painel.getByText("@e2e.dev")).toHaveCount(0);
+
+    // Esc fecha.
+    await page.keyboard.press("Escape");
+    await expect(painel).toBeHidden();
+  });
+
+  test("o assistente não recebe dado financeiro do cliente, mas vê o fiado", async ({ page }) => {
+    const loja = await criarBarbeariaPronta();
+    fichaComHistorico(loja, "Ana Assistida");
+    const assistente = await criarAssistente(loja);
+    await entrar(page, assistente.email, "barbearia");
+    await page.goto(`/painel/agenda?dia=${diaSP(1)}`);
+
+    const painel = await abrirDetalhe(page, "Ana Assistida");
+    await expect(painel.getByText("Visitas")).toBeVisible();
+    await expect(painel.getByText("Total gasto")).toHaveCount(0);
+    await expect(painel.getByText("Ticket médio")).toHaveCount(0);
+    await expect(painel.getByRole("link", { name: /Fiado em aberto/ })).toBeVisible();
+  });
+
+  test("cliente avulso (sem conta e sem celular) abre sem quebrar", async ({ page }) => {
+    const loja = await criarBarbeariaPronta();
+    const ag = criarAgendamento(loja, { cliente: "Cliente Avulso 7", dia: 1, hora: "15:00" });
+    executar(
+      `update customers set phone = null, is_walk_in = true where id = '${ag.customerId}'`,
+    );
+    await abrirAgenda(page, loja, 1);
+
+    const painel = await abrirDetalhe(page, "Cliente Avulso 7");
+    await expect(painel.getByText("Sem celular na ficha")).toBeVisible();
+    await expect(painel.getByRole("button", { name: "Copiar telefone" })).toHaveCount(0);
+    await expect(painel.getByRole("link", { name: "WhatsApp" })).toHaveCount(0);
+    await expect(painel.getByRole("button", { name: "Concluir atendimento" })).toBeVisible();
   });
 });

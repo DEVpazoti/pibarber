@@ -2270,6 +2270,13 @@ export type Database = {
         Args: { "": Database["public"]["Tables"]["appointments"]["Row"] }
         Returns: boolean
       }
+      fotos_dos_clientes: {
+        Args: { p_clientes: string[]; p_shop: string }
+        Returns: {
+          avatar_url: string
+          customer_id: string
+        }[]
+      }
       get_available_slots: {
         Args: { p_dia: string; p_duracao?: number; p_professional: string }
         Returns: {

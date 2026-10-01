@@ -1,15 +1,23 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 import { cn } from "@/lib/utils";
-import { useFecharNoEsc, useTravaRolagem } from "./Modal";
+import { useFecharNoEsc, usePrenderFoco, useTravaRolagem } from "./Modal";
 
 /**
  * Gaveta que sobe de baixo no celular e entra pela direita no desktop.
  * É o formato certo para escolher algo com o polegar sem cobrir a tela toda.
+ *
+ * `lado`:
+ *   - "bottom"      → sempre de baixo;
+ *   - "right"       → sempre pela direita (o /admin, que é só de computador);
+ *   - "responsivo"  → de baixo no celular e painel lateral de 440px a partir
+ *                     de `md`, com o foco preso dentro. É o detalhe do
+ *                     agendamento: no PC, a gaveta de baixo ocupava a largura
+ *                     inteira com botões de 1.000px.
  */
 export function Sheet({
   aberto,
@@ -25,7 +33,7 @@ export function Sheet({
   titulo?: ReactNode;
   descricao?: ReactNode;
   rodape?: ReactNode;
-  lado?: "bottom" | "right";
+  lado?: "bottom" | "right" | "responsivo";
   children: ReactNode;
 }) {
   const [montado, setMontado] = useState(false);
@@ -36,6 +44,9 @@ export function Sheet({
 
   useTravaRolagem(aberto);
   useFecharNoEsc(aberto, aoFechar);
+  // Só no responsivo, para não mudar o comportamento dos usos que já existem.
+  const janela = useRef<HTMLDivElement>(null);
+  usePrenderFoco(montado && aberto && lado === "responsivo", janela);
 
   if (!montado || !aberto) return null;
 
@@ -49,20 +60,27 @@ export function Sheet({
       />
 
       <div
+        ref={janela}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titulo ? idTitulo : undefined}
         aria-describedby={descricao ? idDescricao : undefined}
         className={cn(
           "absolute flex flex-col bg-surface shadow-float animate-fade-up",
-          lado === "bottom"
-            ? "inset-x-0 bottom-0 max-h-[88dvh] rounded-t-card"
-            : "inset-y-0 right-0 w-full max-w-md",
+          "outline-none",
+          lado === "bottom" && "inset-x-0 bottom-0 max-h-[88dvh] rounded-t-card",
+          lado === "right" && "inset-y-0 right-0 w-full max-w-md",
+          lado === "responsivo" &&
+            "inset-x-0 bottom-0 max-h-[88dvh] rounded-t-card md:inset-x-auto md:inset-y-0 md:right-0 md:max-h-none md:w-[440px] md:rounded-none",
         )}
       >
         {/* Puxador — sinaliza que dá para arrastar, e centraliza o olhar. */}
-        {lado === "bottom" ? (
-          <div className="flex justify-center pt-2.5" aria-hidden>
+        {lado !== "right" ? (
+          <div
+            className={cn("flex justify-center pt-2.5", lado === "responsivo" && "md:hidden")}
+            aria-hidden
+          >
             <span className="h-1 w-10 rounded-chip bg-line-strong" />
           </div>
         ) : null}
