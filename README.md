@@ -121,8 +121,7 @@ npm run lint       # eslint
 
 | Arquivo | Conteúdo |
 |---|---|
-| [docs/manual.md](docs/manual.md) | Manual completo: variáveis, deploy na Vercel, login com Google |
-| [ESPECIFICACAO.md](ESPECIFICACAO.md) | Escopo, banco e telas |
+| [docs/especificacao.md](docs/especificacao.md) | Escopo, banco e telas |
 | [docs/promover-dono.md](docs/promover-dono.md) | Cadastrar barbearia e promover o dono |
 | [docs/imagens.md](docs/imagens.md) | Bucket do Storage e envio de imagens |
 

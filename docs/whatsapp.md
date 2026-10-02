@@ -14,7 +14,7 @@ O que o PiBarber manda, e quando:
 
 As três vão do **número da plataforma**, não da barbearia. Os textos estão em
 `src/lib/whatsapp/catalogo.ts` e não são editáveis pela loja. O motivo está em
-`pibarber-CONTEXT.md` §9.
+nas anotações internas do projeto (fora do repositório).
 
 > **Sem as variáveis de ambiente, nada quebra e nada sai.** O site sobe, o
 > cliente agenda, e nenhuma mensagem é enviada, sem erro na tela. Se "não está
@@ -305,7 +305,7 @@ Crie `vercel.json` na raiz:
 ```
 
 Se ativar esta alternativa, **troque o "Mecanismo escolhido" do topo desta
-seção** e a §7 do `pibarber-CONTEXT.md`.
+seção** e as anotações internas do projeto.
 
 ---
 
