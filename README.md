@@ -2,7 +2,7 @@
 
 **Plataforma de agendamento e gestão para barbearias.** Um cliente, uma conta — e a possibilidade de agendar em qualquer barbearia cadastrada.
 
-🔗 **[pibarber.app](https://pibarber.app/)** · Projeto pessoal em desenvolvimento
+🔗 **[pibarber.app](https://pibarber.app/)** · Criado por Guilherme Pazoti e Rafael Vetrano Cairo
 
 <p align="center">
   <img src="docs/screenshots/painel-dono.jpeg" alt="Painel do dono — resumo do dia e agenda" width="600">
@@ -128,4 +128,4 @@ npm run lint       # eslint
 ---
 
 Feito por **Guilherme Pazoti** — [GitHub](https://github.com/DEVpazoti) · [LinkedIn](https://www.linkedin.com/in/guilherme-pazoti)  
-e **Rafael Vetrano** — [GitHub](https://github.com/RafaelVetrano) · [LinkedIn](https://www.linkedin.com/in/rafael-vetrano-37a833232)
+e **Rafael Vetrano Cairo** — [GitHub](https://github.com/RafaelVetrano) · [LinkedIn](https://www.linkedin.com/in/rafael-vetrano-37a833232)
