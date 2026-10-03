@@ -2,7 +2,8 @@
 
 **Plataforma de agendamento e gestão para barbearias.** Um cliente, uma conta — e a possibilidade de agendar em qualquer barbearia cadastrada.
 
-🔗 **[pibarber.app](https://pibarber.app/)** · Criado por Guilherme Pazoti e Rafael Vetrano Cairo
+🔗 **[pibarber.app](https://pibarber.app/)** · Criado por [Guilherme Pazoti](https://www.linkedin.com/in/guilherme-pazoti/) e [Rafael Vetrano Cairo](https://www.linkedin.com/in/rafael-vetrano-cairo-37a833232/)
+
 
 <p align="center">
   <img src="docs/screenshots/painel-dono.jpeg" alt="Painel do dono — resumo do dia e agenda" width="600">
