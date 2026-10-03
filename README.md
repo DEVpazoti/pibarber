@@ -127,4 +127,5 @@ npm run lint       # eslint
 
 ---
 
-Feito por **Guilherme Pazoti** — [LinkedIn](https://www.linkedin.com/in/guilherme-pazoti)
+Feito por **Guilherme Pazoti** — [GitHub](https://github.com/DEVpazoti) · [LinkedIn](https://www.linkedin.com/in/guilherme-pazoti)  
+e **Rafael Vetrano** — [GitHub](https://github.com/RafaelVetrano) · [LinkedIn](https://www.linkedin.com/in/rafael-vetrano-37a833232)
